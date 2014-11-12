@@ -69,5 +69,5 @@ if __name__ == "__main__":
         data = datanew # old data will be garbage-collected
 
     print "Saving file"
-    np.savez(args.filename, traces=traces)
+    np.savez(args.filename, traces=traces, data=data)
     print "Done"
