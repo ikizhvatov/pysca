@@ -35,6 +35,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
+from aes import AES # SlowAES as AES toolbox
+
+# preload the precomputed lookup tables, to avoid bloating of this code
+sbox              = np.load('data/aessbox.npy')           # AES S-box
+invsbox           = np.load('data/aesinvsbox.npy')        # AES inverse S-box
+byteHammingWeight = np.load('data/bytehammingweight.npy') # HW of a byte
+
 #############################################################################
 ### Trace averaging: common for both attacks
 
@@ -142,10 +149,12 @@ def lraAES(data, traces):
     for k in np.arange(0, 256, dtype='uint8'):
 
         # predict intermediate variable
-        sBoxOut = sbox[data ^ k]
+        sBoxIn = data ^ k
+        sBoxOut = sbox[sBoxIn]
+        sBoxInOutXor = sBoxIn ^ sBoxOut
 
         # buld equation system
-        M = np.array(map(leakageModel9, sBoxOut))
+        M = np.array(map(leakageModel9, sBoxInOutXor))
 
         # some precomputations before the per-sample loop
         P = np.dot(np.linalg.inv(np.dot(M.T, M)), M.T)
@@ -182,10 +191,6 @@ def normalizeR2Traces(R2):
 ##############################################################################
 ### A. CPA attack stuff
 
-# preload the precomputed lookup tables
-byteHammingWeight = np.load('data/bytehammingweight.npy') # HW of a byte
-sbox = np.load('data/aessbox.npy') # AES S-box
-
 def leakageModel_HW(x):
     return byteHammingWeight[x]
 
@@ -206,10 +211,15 @@ def cpaAES(data, traces):
 
     traceLength = traces.shape[1]
 
+    # compute intermediate variable predictions
+    # TODO: move to separate functions
     k = np.arange(0,256, dtype='uint8') # key chunk candidates
     H = np.zeros((256, len(data)), dtype='uint8') # intermediate variable predictions
     for i in range(256):
-        H[i,:] = sbox[data ^ k[i]]
+        sBoxIn = data ^ k[i]
+        #H[i,:] = sbox[sBoxIn]     # S-box output
+        #H[i,:] = sBoxIn ^ sbox[sBoxIn] # XOR between S-box input and output
+        H[i,:] = sBoxIn ^ invsbox[sBoxIn] # XOR between inverse S-box input and output
 
     # compute leakage hypotheses for every  all the key candidates
     HL = map(leakageModel_HW, H) # leakage model here (HW for now)
@@ -334,7 +344,12 @@ def testSeriosAttack():
     ### 0. Prerequisites
 
     # the correct key byte (for later metrics)
-    correctKey = np.array([0x2B,0x7E,0x15,0x16,0x28,0xAE,0xD2,0xA6,0xAB,0xF7,0x15,0x88,0x09,0xCF,0x4F,0x3C])
+    correctKeyStr = "2b7e151628aed2a6abf7158809cf4f3c".decode("hex")
+
+    # fro decryption, get the corerct last round key
+    aes = AES()
+    expandedCorrectKey = aes.expandKey(map(ord,correctKeyStr), 16, 16 * 11) # this returs a list
+    correctLastRoundKey = np.array(expandedCorrectKey[176-16:177], dtype="uint8")
 
     ### 1. Load samples and data
 
@@ -344,7 +359,7 @@ def testSeriosAttack():
     # readout
     npzfile = np.load('traces/swaes_atmega_powertraces.npz')
     data = npzfile['data'][:,SboxNum]      # selecting only the required byte
-    traces = npzfile['traces'][:,900:1100] # selecting the sub-range of samples
+    traces = npzfile['traces']#[:,900:1100] # selecting the sub-range of samples
 
     # output traceset parameters
     (numTraces, traceLength) = traces.shape
@@ -354,7 +369,7 @@ def testSeriosAttack():
 
     ### 2. LRA and CPA with a fixed number of traces
 
-    N = 200 # number of traces
+    N = 2000 # number of traces
 
     print "---\nAttacks with %d traces and conditional averaging" % N
     print "Performing conditional trace averaging...",
@@ -381,16 +396,16 @@ def testSeriosAttack():
     print "---\nPlotting..."
     fig, ax = plt.subplots(3,1,sharex=True, squeeze=True)
 
-    WrongKeyRange = range(0, correctKey[SboxNum]) + range(correctKey[SboxNum] + 1, 256)
+    WrongKeyRange = range(0, correctLastRoundKey[SboxNum]) + range(correctLastRoundKey[SboxNum] + 1, 256)
 
     ax[0].plot(CorrTracesAv[WrongKeyRange, :].T, color = 'grey')
-    ax[0].plot(CorrTracesAv[correctKey[SboxNum], :], 'r')
+    ax[0].plot(CorrTracesAv[correctLastRoundKey[SboxNum], :], 'r')
 
     ax[1].plot(R2Av[WrongKeyRange, :].T, color = 'grey')
-    ax[1].plot(R2Av[correctKey[SboxNum], :], 'r')
+    ax[1].plot(R2Av[correctLastRoundKey[SboxNum], :], 'r')
 
     ax[2].plot(R2AvNorm[WrongKeyRange, :].T, color = 'grey')
-    ax[2].plot(R2AvNorm[correctKey[SboxNum], :], 'r')
+    ax[2].plot(R2AvNorm[correctLastRoundKey[SboxNum], :], 'r')
 
     # same vertical scales for correlation and R2
     ax[0].set_ylim(ax[0].get_ylim())
