@@ -48,3 +48,41 @@ Plotting...
 
 Speedup factor CPA: 30.78
 Speedup factor LRA: 694.64
+
+
+----------------------
+This one on the new lab machine (file was opened not the frist time so cached)
+----------------------
+In [14]: %run lracpa_swaes.py
+Loadingtraces/hwaes_xxx_winres_trimtrim940-100.npz
+Traceset parameters
+Number of traces: 7798433
+Trace length: 100
+Loading time:  6.67022741521
+---
+Attacks with 7798433 traces and conditional averaging
+Performing conditional trace averaging... done in 76.101671 s
+Running CPA on averaged traces... done in 0.083418 s
+Running LRA on averaged traces... done in 3.642333 s
+Normalizing LRA results... done
+---
+Plotting...
+
+-----------------------------
+And the same for the laptop (file cached as well)
+See the effect of a faster single-core operation
+-----------------------------
+In [2]: %run lracpa_swaes.py
+Loading traces/hwaes_xxx_winres_trimtrim940-100.npz
+Traceset parameters
+Number of traces: 7798433
+Trace length: 100
+Loading time:  8.26878899541
+---
+Attacks with 7798433 traces and conditional averaging
+Performing conditional trace averaging... done in 61.314245 s
+Running CPA on averaged traces... done in 0.032915 s
+Running LRA on averaged traces... done in 2.942761 s
+Normalizing LRA results... done
+---
+Plotting...
