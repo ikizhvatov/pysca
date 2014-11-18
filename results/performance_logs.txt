@@ -1,0 +1,50 @@
+The following results were obtained on an Intel Core i5-2540M, 8GB RAM,
+Windows 7 x64, Python 2.7.8 x64, numpy-MKL 1.9.0.
+
+----------------------
+swaes_atmega_powertraces.trs
+
+In [3]: %run lra
+Traceset parameters
+Number of traces: 2000
+Trace length: 200
+---
+Attacks with 1000 traces:
+Running CPA... done in 0.349224 s
+Running LRA... done in 37.254000 s
+Normalizing LRA results... done
+---
+Attacks with 1000 traces and conditional averaging:
+Performing conditional trace averaging... done in 0.003820 s
+Running CPA on averaged traces... done in 0.057802 s
+Running LRA on averaged traces... done in 3.997455 s
+Normalizing LRA results... done
+---
+Plotting...
+
+Speedup factor CPA: 5.67
+Speedup factor LRA: 9.3
+
+----------------------
+swaes_atmega_powertraces2_compressed.trs
+
+In [35]: %run lracpa_swaes.py
+Traceset parameters
+Number of traces: 10000
+Trace length: 274
+---
+Attacks with 10000 traces
+Running CPA... done in 6.400619 s
+Running LRA... done in 3439.946043 s
+Normalizing LRA results... done
+---
+Attacks with 10000 traces and conditional averaging
+Performing conditional trace averaging... done in 0.120957 s
+Running CPA on averaged traces... done in 0.086983 s
+Running LRA on averaged traces... done in 4.831128 s
+Normalizing LRA results... done
+---
+Plotting...
+
+Speedup factor CPA: 30.78
+Speedup factor LRA: 694.64
