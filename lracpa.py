@@ -12,6 +12,7 @@ implemented as scripts importing this library.
 
 Heavily under development, correctness not guaranteed.
 
+Version: 0.1, 2014-11-19
 Started by Ilya on 2014-05-25
 '''
 
