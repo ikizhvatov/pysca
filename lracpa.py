@@ -7,43 +7,24 @@ traces are implemented. CPA is included for comparison.
 Uses manual OLS (dot-products and matrix inversion, relying on numpy-MKL
 efficient implementation).
 
-The following results were obtained on an Intel Core i5-2540M, 8GB RAM,
-Windows 7 x64, Python 2.7.8 x64, numpy-MKL 1.9.0.
+This file is a library of functions. The attacks are supposed to be
+implemented as scripts importing this library.
 
-In [3]: %run lra
-Traceset parameters
-Number of traces: 2000
-Trace length: 200
----
-Attacks with 1000 traces:
-Running CPA... done in 0.349224 s
-Running LRA... done in 37.254000 s
-Normalizing LRA results... done
----
-Attacks with 1000 traces and conditional averaging:
-Performing conditional trace averaging... done in 0.003820 s
-Running CPA on averaged traces... done in 0.057802 s
-Running LRA on averaged traces... done in 3.997455 s
-Normalizing LRA results... done
----
-Plotting...
+Heavily under development, correctness not guaranteed.
 
 Started by Ilya on 2014-05-25
 '''
 
 import numpy as np
-import matplotlib.pyplot as plt
-import time
-
-from aes import AES # SlowAES as AES toolbox
 
 # preload the precomputed lookup tables, to avoid bloating of this code
 sbox              = np.load('data/aessbox.npy')           # AES S-box
 invsbox           = np.load('data/aesinvsbox.npy')        # AES inverse S-box
 byteHammingWeight = np.load('data/bytehammingweight.npy') # HW of a byte
 
+
 #############################################################################
-### Trace averaging: common for both attacks
+### Common for both attacks
 
 # averaging of traces based on the value of the data byte
 def conditionalAveragingAESSbox(data, traces):
@@ -70,6 +51,21 @@ def conditionalAveragingAESSbox(data, traces):
 
     return avdata, avtraces
 
+# Functions for computing intermediate values
+# data is a 1-D array, keyByte is a scalar
+def sBoxOut(data, keyByte):
+    sBoxIn = data ^ keyByte
+    return sbox[sBoxIn]
+def sBoxInXorOut(data, keyByte):
+    sBoxIn = data ^ keyByte
+    return sBoxIn ^ sbox[sBoxIn]
+def invSboxOut(data, keyByte):
+    sBoxIn = data ^ keyByte
+    return invsbox[sBoxIn]
+def invSboxInXorOut(data, keyByte):
+    sBoxIn = data ^ keyByte
+    return sBoxIn ^ invsbox[sBoxIn]
+
 ##############################################################################
 ### A. LRA attack stuff
 
@@ -83,7 +79,7 @@ def conditionalAveragingAESSbox(data, traces):
 
 # A simple 9-component linear model (sum of bits with different
 #  coefficients): gi = xi, 0 <= i < 8.
-def leakageModel9(x):
+def basisModel9(x):
     g = []
     for i in range(0, 8):
         bit = (x >> i) & 1  # this is the definition: gi = [bit i of x]
@@ -92,15 +88,15 @@ def leakageModel9(x):
     return g
 # same but only two LSB's included (because teh above shows that they are the
 #  most contributing ones)
-def leakageModel2(x):
+def basisModel2(x):
     g = []
     for i in range(0, 2):
         bit = (x >> i) & 1
         g.append(bit)
     g.append(1)
     return g
-# 9 components plus 
-def leakageModel9withPairs(x):
+# 9 components plus TODO: verify correctness
+def basisModel9withPairs(x):
     g = []
     for i in range(0, 8):
         # append single bits
@@ -115,7 +111,7 @@ def leakageModel9withPairs(x):
     return g
 
 # A Hamming weight model: g0 = HW(x)
-def leakageModelHW(x):
+def basisModelHW(x):
     g = []
     hw = byteHammingWeight[x]  # this is the definition: gi = HW(x)
     g.append(hw)
@@ -133,7 +129,7 @@ def parityOf(int_type):
         parity = 1
     return(parity)
 # b) the model itself
-def leakageModel256(x):
+def basisModel256(x):
     g = []
     # note that we start from 1 to exclude case 0 which means the function
     # does not depend on any bit of x, i.e. a constant - we will add the
@@ -146,7 +142,11 @@ def leakageModel256(x):
     return g
 
 # LRA attack on AES
-def lraAES(data, traces):
+# data                 - 1-D array of input bytes
+# traces               - 2-D array of traces
+# intermediateFunction - one of functions like sBoxOut above in the common section 
+# basisFunctionsModel  - one of function like basisModel9 above in this section 
+def lraAES(data, traces, intermediateFunction, basisFunctionsModel):
 
     (numTraces, traceLength) = traces.shape
 
@@ -163,15 +163,11 @@ def lraAES(data, traces):
     for k in np.arange(0, 256, dtype='uint8'):
 
         # predict intermediate variable
-        # TODO: parametrize
-        sBoxIn = data ^ k
-        #sBoxOut = sbox[sBoxIn]
-        sBoxOut = invsbox[sBoxIn]
-        sBoxInOutXor = sBoxIn ^ sBoxOut
+        intermediateVariable = intermediateFunction(data, k)
 
         # buld equation system
         # TODO: parametrize leakage model; rename leakage model to basis functions or equation builder
-        M = np.array(map(leakageModel9withPairs, sBoxInOutXor))
+        M = np.array(map(basisFunctionsModel, intermediateVariable))
 
         # some precomputations before the per-sample loop
         P = np.dot(np.linalg.inv(np.dot(M.T, M)), M.T)
@@ -181,12 +177,12 @@ def lraAES(data, traces):
         for u in range(0,traceLength):
 
             # if do not need coefficients beta - use precomputed value
-            #np.dot(Q, traces[:,u], out=E)
+            np.dot(Q, traces[:,u], out=E)
 
             # if need the coefficients - do the multiplication using
             # two dot products and let the functuion return beta alongside R2
-            beta = np.dot(P, traces[:,u])
-            E = np.dot(M, beta)
+            #beta = np.dot(P, traces[:,u])
+            #E = np.dot(M, beta)
 
             SSreg[k,u] = np.sum((E - traces[:,u]) ** 2)
 
@@ -215,7 +211,7 @@ def normalizeR2Traces(R2):
 ##############################################################################
 ### A. CPA attack stuff
 
-def leakageModel_HW(x):
+def leakageModelHW(x):
     return byteHammingWeight[x]
 
 # correlation trace computation as improved by StackOverflow community
@@ -231,246 +227,28 @@ def correlationTraceSO(O, P):
     return np.dot(DP, DO) / np.sqrt(tmp)
 
 # CPA attack
-def cpaAES(data, traces):
+# data                 - 1-D array of input bytes
+# traces               - 2-D array of traces
+# intermediateFunction - one of functions like sBoxOut above in the common section
+# leakageFunction      - one of the fucntions like leakgeModelHW above in this section
+def cpaAES(data, traces, intermediateFunction, leakgeFunction):
 
     traceLength = traces.shape[1]
 
     # compute intermediate variable predictions
-    # TODO: parametrize, move to separate functions
     k = np.arange(0,256, dtype='uint8') # key chunk candidates
     H = np.zeros((256, len(data)), dtype='uint8') # intermediate variable predictions
     for i in range(256):
-        sBoxIn = data ^ k[i]
-        
-        # ecnryption
-        #H[i,:] = sbox[sBoxIn]     # S-box output
-        #H[i,:] = sBoxIn ^ sbox[sBoxIn] # XOR between S-box input and output
-        
-        # decryption
-        #H[i,:] = invsbox[sBoxIn]     # S-box output
-        H[i,:] = sBoxIn ^ invsbox[sBoxIn] # XOR between inverse S-box input and output
+        H[i,:] = intermediateFunction(data, k[i])
 
     # compute leakage hypotheses for every  all the key candidates
-    HL = map(leakageModel_HW, H) # leakage model here (HW for now)
+    HL = map(leakgeFunction, H) # leakage model here (HW for now)
 
     CorrTraces = np.empty([256, traceLength]);
 
     # per-keycandidate loop
+    # TODO: loop can be avoided by clever use of np.einsum in correlationTraceSO(...)
     for i in range(0, 256):
         CorrTraces[i] = correlationTraceSO(traces, HL[i])
 
     return CorrTraces
-
-
-##############################################################################
-### Different test flows (TODO: move all below this line to another file,
-###  leaving this file a library only, with a couple of tests)
-
-def testComparePerformance():
-
-    ### 0. Prerequisites
-
-    # the correct key byte (for later metrics)
-    correctKey = np.array([0x2B,0x7E,0x15,0x16,0x28,0xAE,0xD2,0xA6,0xAB,0xF7,0x15,0x88,0x09,0xCF,0x4F,0x3C])
-
-    ### 1. Load samples and data
-
-    # parameters
-    SboxNum = 0
-
-    # readout
-    npzfile = np.load('traces/swaes_atmega_powertraces.npz')
-    data = npzfile['data'][:,SboxNum]      # selecting only the required byte
-    traces = npzfile['traces'][:,900:1100] # selecting the sub-range of samples
-
-    # output traceset parameters
-    (numTraces, traceLength) = traces.shape
-    print "Traceset parameters"
-    print "Number of traces:", numTraces
-    print "Trace length:", traceLength
-
-    ### 2. LRA and CPA with a fixed number of traces
-
-    N = 200 # number of traces
-
-    print "---\nAttacks with %d traces" % N
-    print "Running CPA...",
-    t0 = time.clock()
-    CorrTraces = cpaAES(data[0:N], traces[0:N])
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Running LRA...",
-    t0 = time.clock()
-    R2 = lraAES(data[0:N], traces[0:N])
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Normalizing LRA results...",
-    R2norm = normalizeR2Traces(R2)
-    print "done"
-
-    print "---\nAttacks with %d traces and conditional averaging" % N
-    print "Performing conditional trace averaging...",
-    t0 = time.clock()
-    (avdata, avtraces) = conditionalAveragingAESSbox(data[0:N], traces[0:N])
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Running CPA on averaged traces...",
-    t0 = time.clock()
-    CorrTracesAv = cpaAES(avdata, avtraces)
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Running LRA on averaged traces...",
-    t0 = time.clock()
-    R2Av = lraAES(avdata, avtraces)
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Normalizing LRA results...",
-    R2AvNorm = normalizeR2Traces(R2Av)
-    print "done"
-
-    ### 3.  visualize the result, highlighting the correct trace
-
-    print "---\nPlotting..."
-    fig, ax = plt.subplots(3,2,sharex=True, squeeze=True)
-
-    WrongKeyRange = range(0, correctKey[SboxNum]) + range(correctKey[SboxNum] + 1, 256)
-
-    ax[0][0].plot(CorrTraces[WrongKeyRange, :].T, color = 'grey')
-    ax[0][0].plot(CorrTraces[correctKey[SboxNum], :], 'r')
-
-    ax[1][0].plot(R2[WrongKeyRange, :].T, color = 'grey')
-    ax[1][0].plot(R2[correctKey[SboxNum], :], 'r')
-
-    ax[2][0].plot(R2norm[WrongKeyRange, :].T, color = 'grey')
-    ax[2][0].plot(R2norm[correctKey[SboxNum], :], 'r')
-
-    ax[0][1].plot(CorrTracesAv[WrongKeyRange, :].T, color = 'grey')
-    ax[0][1].plot(CorrTracesAv[correctKey[SboxNum], :], 'r')
-
-    ax[1][1].plot(R2Av[WrongKeyRange, :].T, color = 'grey')
-    ax[1][1].plot(R2Av[correctKey[SboxNum], :], 'r')
-
-    ax[2][1].plot(R2AvNorm[WrongKeyRange, :].T, color = 'grey')
-    ax[2][1].plot(R2AvNorm[correctKey[SboxNum], :], 'r')
-
-    # same vertical scales for correlation and R2
-    ax[0][0].set_ylim(ax[0][1].get_ylim())
-    ax[1][0].set_ylim(ax[1][1].get_ylim())
-
-    fig.suptitle("CPA and LRA on %d traces" % N)
-    ax[0][0].set_title('Without cond. averaging')
-    ax[0][1].set_title('With cond. averaging')
-    ax[0][0].set_ylabel('Correlation')
-    ax[1][0].set_ylabel('R2')
-    ax[2][0].set_ylabel('Normalized R2')
-    ax[2][0].set_xlabel('Time sample')
-    ax[2][1].set_xlabel('Time sample')
-
-    plt.show()
-
-def testSeriosAttack():
-
-    ### 0. Prerequisites
-
-    # the correct key byte (for later metrics)
-    correctKeyStr = "C18C0DDA75E5C42ECAD451A079338A11".decode("hex")
-
-    # fro decryption, get the corerct last round key
-    aes = AES()
-    expandedCorrectKey = aes.expandKey(map(ord,correctKeyStr), 16, 16 * 11) # this returs a list
-    correctLastRoundKey = np.array(expandedCorrectKey[176-16:177], dtype="uint8")
-    print "Known last round subkey: ";
-    print map(hex,correctLastRoundKey)
-
-    ### 1. Load samples and data
-
-    # parameters
-    SboxNum = 1
-
-    # readout
-    tracesetFilename = "traces/hwaes_xxx_winres_trimtrim940-100.npz"
-    print "Loading " + tracesetFilename
-    t0 = time.clock()
-    npzfile = np.load(tracesetFilename)
-    data = npzfile['data'][:,SboxNum]      # selecting only the required byte
-    traces = npzfile['traces']#[:,900:1100] # selecting the sub-range of samples
-    t1 = time.clock()
-    timeLoad = t1 - t0
-
-    # output traceset parameters
-    (numTraces, traceLength) = traces.shape
-    print "Traceset parameters"
-    print "Number of traces:", numTraces
-    print "Trace length:", traceLength
-    print "Loading time: ", timeLoad
-
-    ### 2. LRA and CPA with a fixed number of traces
-
-    N = 7000000 # number of traces
-
-    print "---\nAttacks with %d traces and conditional averaging" % N
-    print "Performing conditional trace averaging...",
-    t0 = time.clock()
-    (avdata, avtraces) = conditionalAveragingAESSbox(data[0:N], traces[0:N])
-    plt.plot(avtraces.T)
-    plt.show()
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Running CPA on averaged traces...",
-    t0 = time.clock()
-    CorrTracesAv = cpaAES(avdata, avtraces)
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Running LRA on averaged traces...",
-    t0 = time.clock()
-    R2Av = lraAES(avdata, avtraces)
-    t1 = time.clock()
-    print "done in %f s" % (t1 - t0)
-    print "Adjusting and normalizing LRA results...",
-    R2AvAdj = adjustedR2(R2Av, 256, 36)
-    R2AvNorm = normalizeR2Traces(R2Av)
-    print "done"
-
-    ### 3.  visualize the result, highlighting the correct trace
-
-    print "---\nPlotting..."
-    fig, ax = plt.subplots(4,1,sharex=True, squeeze=True)
-
-    WrongKeyRange = range(0, correctLastRoundKey[SboxNum]) + range(correctLastRoundKey[SboxNum] + 1, 256)
-
-    ax[0].plot(CorrTracesAv[WrongKeyRange, :].T, color = 'grey')
-    ax[0].plot(CorrTracesAv[correctLastRoundKey[SboxNum], :], 'r')
-
-    ax[1].plot(R2AvAdj[WrongKeyRange, :].T, color = 'grey')
-    ax[1].plot(R2AvAdj[correctLastRoundKey[SboxNum], :], 'r')
-
-    ax[2].plot(R2AvAdj[WrongKeyRange, :].T, color = 'grey')
-    ax[2].plot(R2AvAdj[correctLastRoundKey[SboxNum], :], 'r')
-
-    ax[3].plot(R2AvNorm[WrongKeyRange, :].T, color = 'grey')
-    ax[3].plot(R2AvNorm[correctLastRoundKey[SboxNum], :], 'r')
-
-    fig.suptitle("CPA and LRA on %d traces" % N)
-    ax[0].set_ylabel('Correlation')
-    ax[1].set_ylabel('R2')
-    ax[2].set_ylabel('Adjusted R2')
-    ax[3].set_ylabel('Normalized R2')
-    ax[3].set_xlabel('Time sample')
-
-    plt.show()
-
- 
-##############################################################################
-### The main execution body
-
-if __name__ == '__main__':
-
-    # TODO: common file-reading code should be here
-
-    # run different scenarious defined as functions above
-
-    #testComparePerformance()
-
-    testSeriosAttack()
-
-

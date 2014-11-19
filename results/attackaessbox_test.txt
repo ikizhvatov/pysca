@@ -1,0 +1,29 @@
+In [104]: %run attackaessbox.py
+---
+Attack parameters
+Intermediate function   : sBoxOut
+CPA leakage function    : leakageModelHW
+LRA basis functions     : basisModel9
+Encryption              : True
+S-box number            : 1
+Known roundkey          : 0x2b7e151628aed2a6abf7158809cf4f3c
+---
+Loading traces/swaes_atmega_powertraces.npz
+Number of traces loaded : 20
+Trace length            : 2800
+Loading time            : 0.01 s
+---
+Attack
+Performing conditional trace averaging... done in 0.00 s
+Running CPA on averaged traces... done in 0.07 s
+Running LRA on averaged traces... done in 9.47 s
+---
+Results CPA
+Winning candidate: 0x20, peak magnitude 0.809684
+Correct candidate: 0x7e, peak magnitude 0.750731, rank 22
+---
+Results LRA
+Winning candidate: 0xfa, peak magnitude 0.964337
+Correct candidate: 0x7e, peak magnitude 0.892681, rank 123
+---
+Plotting...
