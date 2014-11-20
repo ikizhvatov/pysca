@@ -166,7 +166,6 @@ def lraAES(data, traces, intermediateFunction, basisFunctionsModel):
         intermediateVariable = intermediateFunction(data, k)
 
         # buld equation system
-        # TODO: parametrize leakage model; rename leakage model to basis functions or equation builder
         M = np.array(map(basisFunctionsModel, intermediateVariable))
 
         # some precomputations before the per-sample loop
