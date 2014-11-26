@@ -32,9 +32,9 @@ SboxNum = 1         # S-box to attack, counting from 0
 
 ## Leakage model
 ## (these parameters correspond to function names in lracpa module)
-intermediateFunction = sBoxOut         # for CPA and LRA
-leakageFunction      = leakageModelHW  # for CPA
-basisFunctionsModel  = basisModel9     # for LRA
+intermediateFunction = sBoxOut                  # for CPA and LRA
+leakageFunction      = leakageModelHW           # for CPA
+basisFunctionsModel  = basisModelSingleBits     # for LRA
 
 ## Known key for ranking
 knownKeyStr = "2B7E151628AED2A6ABF7158809CF4F3C".decode("hex") # the correct key

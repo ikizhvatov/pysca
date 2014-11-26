@@ -77,34 +77,32 @@ def invSboxInXorOut(data, keyByte):
 # 2. compute and return the values of gi(x), such that they can be used
 #    later to obtain rows of the matrix for linear regression
 # Note that column of ones is included!
+# Note also that not all the functions are currently compatible with the code
+#  in the CPA and LRA functions because latter use wrapper functions for
+#  incremental binding. Only those are compatible that take a second bitWidth
+#  argument.
+# TODO: make all functions compatible with incremental binding.
 
-# A simple 9-component linear model (sum of bits with different
-#  coefficients): gi = xi, 0 <= i < 8.
-def basisModel9(x):
+
+# A simple linear model - sum of bits with different coefficients:
+#  gi = xi, 0 <= i < bitWidth.
+def basisModelSingleBits(x, bitWidth):
     g = []
-    for i in range(0, 8):
+    for i in range(0, bitWidth):
         bit = (x >> i) & 1  # this is the definition: gi = [bit i of x]
         g.append(bit)
     g.append(1)
     return g
-# same but only two LSB's included (because teh above shows that they are the
-#  most contributing ones)
-def basisModel2(x):
+
+# Invididual bits and all pairwise products of bits
+def basisModelSingleBitsAndPairs(x, bitWidth):
     g = []
-    for i in range(0, 2):
-        bit = (x >> i) & 1
-        g.append(bit)
-    g.append(1)
-    return g
-# 9 components plus TODO: verify correctness
-def basisModel9withPairs(x):
-    g = []
-    for i in range(0, 8):
+    for i in range(0, bitWidth):
         # append single bits
         bit = (x >> i) & 1  # this is the definition: gi = [bit i of x]
         g.append(bit)
         # append pairs
-        for j in range(i + 1, 8):
+        for j in range(i + 1, bitWidth):
             otherbit = (x >> j) & 1
             bitproduct = bit * otherbit
             g.append(bitproduct)
@@ -145,11 +143,20 @@ def basisModel256(x):
 # LRA attack on AES
 # data                 - 1-D array of input bytes
 # traces               - 2-D array of traces
-# intermediateFunction - one of functions like sBoxOut above in the common section 
-# basisFunctionsModel  - one of function like basisModel9 above in this section 
+# intermediateFunction - one of the functions like sBoxOut above in the common section 
+# basisFunctionsModel  - one of the functions like basisModelSingleBits above
+#                        in this section
+# TODO parametrize hard-coded values such as 256, 8, refactor to merge common part with DES
 def lraAES(data, traces, intermediateFunction, basisFunctionsModel):
 
+    ### 0. some helper variables
     (numTraces, traceLength) = traces.shape
+    
+    # define a wrapper for currying (incremental parameter binding)
+    def basisFunctionsModelWrapper(y):
+        def basisFunctionsModelCurry(x):
+            return basisFunctionsModel(x, y)
+        return basisFunctionsModelCurry
 
     ### 1: compute SST over the traces
     SStot = np.sum((traces - np.mean(traces, 0)) ** 2, 0)
@@ -167,7 +174,7 @@ def lraAES(data, traces, intermediateFunction, basisFunctionsModel):
         intermediateVariable = intermediateFunction(data, k)
 
         # buld equation system
-        M = np.array(map(basisFunctionsModel, intermediateVariable))
+        M = np.array(map(basisFunctionsModelWrapper(8), intermediateVariable))
 
         # some precomputations before the per-sample loop
         P = np.dot(np.linalg.inv(np.dot(M.T, M)), M.T)
