@@ -92,9 +92,9 @@ keyRankEvolutionLRA = np.zeros(numSteps)
 
 # the incremental loop
 tracesToSkip = 20 # warm-up to avoid numerical problems
-for i in range (0, tracesToSkip):
+for i in range (0, tracesToSkip - 1):
     CondAver.addTrace(data[i], traces[i])
-for i in range(tracesToSkip, N):
+for i in range(tracesToSkip - 1, N):
     CondAver.addTrace(data[i], traces[i])
 
     if ((i % evolutionStep == 0) or (i == N-1)):
@@ -104,7 +104,7 @@ for i in range(tracesToSkip, N):
         CorrTraces = cpaAES(avdata, avtraces, intermediateFunction, leakageFunction)
         R2 = lraAES(avdata, avtraces, intermediateFunction, basisFunctionsModel)
 
-        print "---\nResults after %d traces" % i
+        print "---\nResults after %d traces" % (i + 1)
         print "CPA"
         CorrPeaks = np.max(CorrTraces, axis=1) # global maximization
         CpaWinningCandidate = np.argmax(CorrPeaks)
@@ -132,35 +132,45 @@ for i in range(tracesToSkip, N):
 ### 4. Visualize results
 
 print "---\nPlotting..."
-fig, ax = plt.subplots(2, 2, sharex=False, squeeze=True)
+
+fig = plt.figure()
+
+# allocate grid
+axCPA = plt.subplot2grid((2, 2), (0, 0))
+axLRA = plt.subplot2grid((2, 2), (1, 0))
+axRankEvolution = plt.subplot2grid((2, 2), (0, 1), rowspan = 2)
 
 # CPA
-ax[0][0].plot(CorrTraces.T, color = 'grey')
-ax[0][0].plot(CorrTraces[CpaWinningCandidate, :], 'blue')
-ax[0][0].plot(CorrTraces[knownKey[SboxNum], :], 'r')
-
-ax[0][1].plot(keyRankEvolutionCPA, color = 'black')
+axCPA.plot(CorrTraces.T, color = 'grey')
+if CpaWinningCandidate == knownKey[SboxNum]:
+    axCPA.plot(CorrTraces[CpaWinningCandidate, :], 'blue')
+axCPA.plot(CorrTraces[knownKey[SboxNum], :], 'r')
+axRankEvolution.plot(keyRankEvolutionCPA, color = 'green')
 
 # LRA
-ax[1][0].plot(R2.T, color = 'grey')
-ax[1][0].plot(R2[LraWinningCandidate, :], 'blue')
-ax[1][0].plot(R2[knownKey[SboxNum], :], 'r')
-
-ax[1][1].plot(keyRankEvolutionLRA, color = 'black')
+axLRA.plot(R2.T, color = 'grey')
+if LraWinningCandidate == knownKey[SboxNum]:
+    axLRA.plot(R2[LraWinningCandidate, :], 'blue')
+axLRA.plot(R2[knownKey[SboxNum], :], 'r')
+axRankEvolution.plot(keyRankEvolutionLRA, color = 'magenta')
 
 # labels
 fig.suptitle("CPA and LRA on %d traces" % N)
-ax[0][0].set_ylabel('Correlation')
-ax[1][0].set_ylabel('R2')
-ax[1][0].set_xlabel('Time sample')
-ax[0][1].set_ylabel('Rank')
-ax[1][1].set_ylabel('Rank')
-ax[1][1].set_xlabel('Number of traces')
+axCPA.set_ylabel('Correlation')
+axLRA.set_ylabel('R2')
+axLRA.set_xlabel('Time sample')
+axRankEvolution.set_ylabel('Correct key candidate rank')
+axRankEvolution.set_xlabel('Number of traces')
 
-# Limits
-ax[0][1].set_xlim([np.ceil(tracesToSkip / evolutionStep), numSteps])
-ax[0][1].set_xlim([np.ceil(tracesToSkip / evolutionStep), numSteps])
-ax[1][1].set_ylim([0, 256])
-ax[1][1].set_ylim([0, 256])
+# Limits and tick labels for key rand evolution plot
+# TODO fix label value offset (should be -1 to what it is now)
+axRankEvolution.set_xlim([np.ceil(tracesToSkip / evolutionStep) - 1, numSteps - 1])
+axRankEvolution.set_ylim([0, 256])
+xTickLocations = axRankEvolution.get_xticks()
+xTickLabels = map(lambda x: "%g" % x, xTickLocations * evolutionStep)
+axRankEvolution.set_xticklabels(xTickLabels)
+
+# Legend for rank evolution plot
+axRankEvolution.legend(['CPA', 'LRA'], loc='upper right')
 
 plt.show()
