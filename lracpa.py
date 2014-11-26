@@ -200,6 +200,66 @@ def lraAES(data, traces, intermediateFunction, basisFunctionsModel):
 
     return R2
 
+# LRA attack on DES
+# data                 - array of inputs (format depends on intermediateFunction)
+# traces               - 2-D array of traces
+# intermediateFunction - one of functions like sBoxOut above in the common section
+# sBoxNumber           - DES S-box to attack
+# basisFunctionsModel  - one of function like basisModel9 above in this section
+# TODO parametrize hard-coded values such as 64, 6, refactor to merge common part with AES
+def lraDES(data, traces, intermediateFunction, sBoxNumber, basisFunctionsModel):
+
+    ### 0. some helper variables
+    (numTraces, traceLength) = traces.shape
+
+    # define a wrapper (currying) for incremental parameter binding
+    def basisFunctionsModelWrapper(y):
+        def basisFunctionsModelCurry(x):
+            return basisFunctionsModel(x, y)
+        return basisFunctionsModelCurry
+
+    ### 1: compute SST over the traces
+    SStot = np.sum((traces - np.mean(traces, 0)) ** 2, 0)
+
+    ### 2. The main attack loop
+
+    # preallocate arrays
+    SSreg = np.empty((64, traceLength)) # Sum of Squares due to regression
+    E = np.empty(numTraces)              # expected values
+
+    # per-keycandidate loop
+    for k in np.arange(0, 64, dtype='uint8'):
+
+        # predict intermediate variable
+        intermediateVariable = intermediateFunction(data, k, sBoxNumber)
+
+        # buld equation system
+        M = np.array(map(basisFunctionsModelWrapper(6), intermediateVariable))
+
+        # some precomputations before the per-sample loop
+        P = np.dot(np.linalg.inv(np.dot(M.T, M)), M.T)
+        Q = np.dot(M, P)
+
+        # per-sample loop: solve the system for each time moment
+        for u in range(0,traceLength):
+
+            # if do not need coefficients beta - use precomputed value
+            np.dot(Q, traces[:,u], out=E)
+
+            # if need the coefficients - do the multiplication using
+            # two dot products and let the functuion return beta alongside R2
+            #beta = np.dot(P, traces[:,u])
+            #E = np.dot(M, beta)
+
+            SSreg[k,u] = np.sum((E - traces[:,u]) ** 2)
+
+        #print 'Done with candidate', k
+
+    ### 3. compute Rsquared
+    R2 = 1 - SSreg / SStot[None, :]
+
+    return R2
+
 # convert R2 to adjusted R2 (https://en.wikipedia.org/wiki/Coefficient_of_determination#Adjusted_R2)
 # n - number of samples
 # p - the total number of regressors in the linear model (i.e. basis functions), excluding the linear term
@@ -256,6 +316,34 @@ def cpaAES(data, traces, intermediateFunction, leakgeFunction):
     # per-keycandidate loop
     # TODO: loop can be avoided by clever use of np.einsum in correlationTraceSO(...)
     for i in range(0, 256):
+        CorrTraces[i] = correlationTraceSO(traces, HL[i])
+
+    return CorrTraces
+
+# CPA attack on DES
+# data                 - array of inputs (format depends on intermediateFunction)
+# traces               - 2-D array of traces
+# intermediateFunction - one of functions like sBoxOut above in the common section
+# sBoxNumber           - DES S-box to attack
+# leakageFunction      - one of the fucntions like leakgeModelHW above in this section
+def cpaDESwithAveraging(data, traces, intermediateFunction, sBoxNumber, leakgeFunction):
+
+    traceLength = traces.shape[1]
+
+    # compute intermediate variable predictions
+    k = np.arange(0,64, dtype='uint8') # key chunk candidates
+    H = np.zeros((64, len(data)), dtype='uint8') # intermediate variable predictions
+    for i in range(64):
+        H[i,:] = intermediateFunction(data, k[i], sBoxNumber)
+
+    # compute leakage hypotheses for every  all the key candidates
+    HL = map(leakgeFunction, H) # leakage model here (HW for now)
+
+    CorrTraces = np.empty([64, traceLength]);
+
+    # per-keycandidate loop
+    # TODO: loop can be avoided by clever use of np.einsum in correlationTraceSO(...)
+    for i in range(0, 64):
         CorrTraces[i] = correlationTraceSO(traces, HL[i])
 
     return CorrTraces
