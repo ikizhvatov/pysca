@@ -298,7 +298,7 @@ def correlationTraceSO(O, P):
 # traces               - 2-D array of traces
 # intermediateFunction - one of functions like sBoxOut above in the common section
 # leakageFunction      - one of the fucntions like leakgeModelHW above in this section
-def cpaAES(data, traces, intermediateFunction, leakgeFunction):
+def cpaAES(data, traces, intermediateFunction, leakageFunction):
 
     traceLength = traces.shape[1]
 
@@ -309,7 +309,7 @@ def cpaAES(data, traces, intermediateFunction, leakgeFunction):
         H[i,:] = intermediateFunction(data, k[i])
 
     # compute leakage hypotheses for every  all the key candidates
-    HL = map(leakgeFunction, H) # leakage model here (HW for now)
+    HL = map(leakageFunction, H) # leakage model here (HW for now)
 
     CorrTraces = np.empty([256, traceLength]);
 
@@ -326,7 +326,7 @@ def cpaAES(data, traces, intermediateFunction, leakgeFunction):
 # intermediateFunction - one of functions like sBoxOut above in the common section
 # sBoxNumber           - DES S-box to attack
 # leakageFunction      - one of the fucntions like leakgeModelHW above in this section
-def cpaDESwithAveraging(data, traces, intermediateFunction, sBoxNumber, leakgeFunction):
+def cpaDESwithAveraging(data, traces, intermediateFunction, sBoxNumber, leakageFunction):
 
     traceLength = traces.shape[1]
 
@@ -337,7 +337,7 @@ def cpaDESwithAveraging(data, traces, intermediateFunction, sBoxNumber, leakgeFu
         H[i,:] = intermediateFunction(data, k[i], sBoxNumber)
 
     # compute leakage hypotheses for every  all the key candidates
-    HL = map(leakgeFunction, H) # leakage model here (HW for now)
+    HL = map(leakageFunction, H) # leakage model here (HW for now)
 
     CorrTraces = np.empty([64, traceLength]);
 

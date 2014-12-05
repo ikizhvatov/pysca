@@ -1,4 +1,3 @@
-# ignore traces
 traces/*
 .ipynb_checkpoints/*
 *.pyc

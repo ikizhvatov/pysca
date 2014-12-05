@@ -26,9 +26,9 @@ from condaver import * # incremental conditional averaging
 
 ## Traceset, number of traces, and S-box to attack
 tracesetFilename = "traces/swaes_atmega_powertraces.npz"
-N = 50              # number of traces to attack (less or equal to the amount o f traces in the file)
-evolutionStep = 2   # step for intermediate reports
-SboxNum = 1         # S-box to attack, counting from 0
+N                = 50  # number of traces to attack (less or equal to the amount o f traces in the file)
+evolutionStep    = 2   # step for intermediate reports
+SboxNum          = 1   # S-box to attack, counting from 0
 
 ## Leakage model
 ## (these parameters correspond to function names in lracpa module)
@@ -49,6 +49,7 @@ else:       # for decryption, need to run key expansion
 
 ##################################################
 ### 1. Log the parameters
+
 print "---\nAttack parameters"
 print "Intermediate function   :", intermediateFunction.__name__
 print "CPA leakage function    :", leakageFunction.__name__
@@ -104,7 +105,7 @@ for i in range(tracesToSkip - 1, N):
         CorrTraces = cpaAES(avdata, avtraces, intermediateFunction, leakageFunction)
         R2 = lraAES(avdata, avtraces, intermediateFunction, basisFunctionsModel)
 
-        print "---\nResults after %d traces" % (i + 1)
+        print "---\nResults after %d traces" % i
         print "CPA"
         CorrPeaks = np.max(CorrTraces, axis=1) # global maximization
         CpaWinningCandidate = np.argmax(CorrPeaks)
@@ -161,10 +162,11 @@ axLRA.set_ylabel('R2')
 axLRA.set_xlabel('Time sample')
 axRankEvolution.set_ylabel('Correct key candidate rank')
 axRankEvolution.set_xlabel('Number of traces')
+axRankEvolution.set_title('Correct key rank evolution (global maximisation)')
 
 # Limits and tick labels for key rand evolution plot
 # TODO fix label value offset (should be -1 to what it is now)
-axRankEvolution.set_xlim([np.ceil(tracesToSkip / evolutionStep) - 1, numSteps - 1])
+axRankEvolution.set_xlim([np.ceil(tracesToSkip / np.double(evolutionStep)), numSteps - 1])
 axRankEvolution.set_ylim([0, 256])
 xTickLocations = axRankEvolution.get_xticks()
 xTickLabels = map(lambda x: "%g" % x, xTickLocations * evolutionStep)
