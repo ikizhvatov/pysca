@@ -143,14 +143,14 @@ axRankEvolution = plt.subplot2grid((2, 2), (0, 1), rowspan = 2)
 
 # CPA
 axCPA.plot(CorrTraces.T, color = 'grey')
-if CpaWinningCandidate == knownKey[SboxNum]:
+if CpaWinningCandidate != knownKey[SboxNum]:
     axCPA.plot(CorrTraces[CpaWinningCandidate, :], 'blue')
 axCPA.plot(CorrTraces[knownKey[SboxNum], :], 'r')
 axRankEvolution.plot(keyRankEvolutionCPA, color = 'green')
 
 # LRA
 axLRA.plot(R2.T, color = 'grey')
-if LraWinningCandidate == knownKey[SboxNum]:
+if LraWinningCandidate != knownKey[SboxNum]:
     axLRA.plot(R2[LraWinningCandidate, :], 'blue')
 axLRA.plot(R2[knownKey[SboxNum], :], 'r')
 axRankEvolution.plot(keyRankEvolutionLRA, color = 'magenta')
