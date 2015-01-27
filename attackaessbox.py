@@ -38,7 +38,7 @@ basisFunctionsModel  = basisModelSingleBits     # for LRA
 
 ## Known key for ranking
 knownKeyStr = "2B7E151628AED2A6ABF7158809CF4F3C".decode("hex") # the correct key
-encrypt = True # to avoid selective commenting in the followign lines below 
+encrypt = True # to avoid selective commenting in the following lines below 
 
 if encrypt: # for encryption, the first round key is as is
     knownKey = np.array(map(ord, knownKeyStr), dtype="uint8")

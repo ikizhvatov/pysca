@@ -28,6 +28,7 @@ byteHammingWeight = np.load('data/bytehammingweight.npy') # HW of a byte
 ### Common for both attacks
 
 # averaging of traces based on the value of the data byte
+# TODO: remove, implemented in condaver.py
 def conditionalAveragingAESSbox(data, traces):
 
     (numTraces, traceLength) = traces.shape
