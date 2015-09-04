@@ -188,7 +188,7 @@ axRankEvolution.set_xlabel('Number of traces')
 axRankEvolution.set_title('Correct key rank evolution (global maximisation)')
 
 # Limits and tick labels for key rand evolution plot
-#axRankEvolution.set_xlim([np.ceil(tracesToSkip / np.double(evolutionStep)), numSteps - 1])
+axRankEvolution.set_xlim([traceNumbers[np.ceil(tracesToSkip / np.double(evolutionStep)) - 1], N])
 axRankEvolution.set_ylim([0, 256])
 axRankEvolution.grid(b=True, which='both', color='0.65',linestyle='-')
 #axRankEvolution.ticklabel_format(style='sci', axis='x', scilimits=(0,0), useOffset=True)
