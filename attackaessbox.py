@@ -8,7 +8,7 @@ In the plots:
 - blue trace is for the winning candidate (e.g. the one with maximum peak)
 - grey traces are for all other candiadte
 
-Version: 0.2, 2015-08-11
+Version: 0.2, 2015-09-04
 Started by Ilya on 2014-11-18
 '''
 
