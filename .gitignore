@@ -1,3 +1,5 @@
 traces/*
+results/*
+misc/*
 .ipynb_checkpoints/*
 *.pyc
