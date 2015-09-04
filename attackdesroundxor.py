@@ -42,7 +42,7 @@ basisFunctionsModel  = basisModelSingleBits       # for LRA
 knownKeyStr = "8A7400A03230DA28".decode("hex") # the correct key
 encrypt = True # to avoid selective commenting in the following lines below 
 
-# TODO for DES
+# TODO for DES: compute the 1st round key
 #if encrypt: # for encryption, the first round key is as is
 #    knownKey = np.array(map(ord, knownKeyStr), dtype="uint8")
 #else:       # for decryption, need to run key expansion 
