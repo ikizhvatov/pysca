@@ -341,7 +341,8 @@ def cpaDESwithAveraging(data, traces, intermediateFunction, sBoxNumber, leakageF
     k = np.arange(0,64, dtype='uint8') # key chunk candidates
     H = np.zeros((64, len(data)), dtype='uint8') # intermediate variable predictions
     for i in range(64):
-        H[i,:] = intermediateFunction(data, k[i], sBoxNumber)
+        for j in range(0, len(data)):
+            H[i,j] = intermediateFunction(data[j], k[i], sBoxNumber)
 
     # compute leakage hypotheses for every  all the key candidates
     HL = map(leakageFunction, H) # leakage model here (HW for now)

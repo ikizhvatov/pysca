@@ -159,7 +159,25 @@ def roundXOR_targetVariable(averagingValue, keyChunk, sBoxNumber):
 
     return RoundInXorOutPerSBox
 
+def roundXOR_allInOne(input, keyChunk, sBoxNumber):
 
+    # prepare the first round input halves
+    permutedInput = permuteBits(input, InitialPermutation)
+    rightHalf = permutedInput & 0xFFFFFFFF
+    leftHalf = permutedInput >> 32
+
+    # get S-box output
+    a = ExpansionPerSbox[sBoxNumber](rightHalf)
+    SBoxIn = a ^ keyChunk
+    SBoxOut = SBoxLUT[sBoxNumber][SBoxIn]
+    
+    # gather the input bits that need to be XORed with the S-box output
+    b = InversePermutationPerSbox[sBoxNumber](rightHalf ^ leftHalf)
+    
+    # compute the XOR
+    RoundInXorOutPerSBox = SBoxOut ^ b
+    
+    return RoundInXorOutPerSBox
 
 ##############################################################################
 # Helper functions and tests
