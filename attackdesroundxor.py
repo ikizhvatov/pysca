@@ -27,16 +27,16 @@ from lracpa import * # my LRA-CPA toolbox
 
 ## Traceset, number of traces, and S-box to attack
 tracesetFilename = "traces/des_card8_pa.npz"
+sampleRange      = (400, 450) # range of smaples to attack
 N                = 4000  # number of traces to attack (less or equal to the amount of traces in the file)
 evolutionStep    = 100   # step for intermediate reports
 SboxNum          = 1     # S-box to attack, counting from 0
 
 ## Leakage model
 ## (these parameters correspond to function names in lracpa module)
-averagingFunction    = roundXOR_valueForAveraging # for CPA and LRA
-intermediateFunction = roundXOR_targetVariable    # for CPA and LRA
+#averagingFunction    = roundXOR_valueForAveraging # for CPA and LRA
+#intermediateFunction = roundXOR_targetVariable    # for CPA and LRA
 leakageFunction      = leakageModelHW             # for CPA
-basisFunctionsModel  = basisModelSingleBits       # for LRA
 
 ## Known key for ranking
 knownKeyStr = "8A7400A03230DA28".decode("hex") # the correct key
@@ -71,7 +71,7 @@ print "---\nLoading " + tracesetFilename
 t0 = time.clock()
 npzfile = np.load(tracesetFilename)
 data = npzfile['data'][0:N] # selecting only the required byte
-traces = npzfile['traces'][0:N,400:450]   # can select a sub-range of samples here TODO: parametrize!
+traces = npzfile['traces'][0:N,sampleRange[0]:sampleRange[1]]
 t1 = time.clock()
 timeLoad = t1 - t0
 

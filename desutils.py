@@ -159,6 +159,7 @@ def roundXOR_targetVariable(averagingValue, keyChunk, sBoxNumber):
 
     return RoundInXorOutPerSBox
 
+# Both merged into none, for debugging without conditional averaging
 def roundXOR_allInOne(input, keyChunk, sBoxNumber):
 
     # prepare the first round input halves
@@ -167,7 +168,7 @@ def roundXOR_allInOne(input, keyChunk, sBoxNumber):
     leftHalf = permutedInput >> 32
 
     # get S-box output
-    a = ExpansionPerSbox[sBoxNumber](rightHalf)
+    a = ExpansionPerSbox[sBoxNumber](rightHalf) # returns 6 bits of S-box input
     SBoxIn = a ^ keyChunk
     SBoxOut = SBoxLUT[sBoxNumber][SBoxIn]
     
@@ -201,7 +202,7 @@ def generateInversePermutationPerSbox():
         print "((x >> %d) & 8) | ((x >> %d) & 4) | ((x >> %d) & 2) | ((x >> %d) & 1)" % (shifts[0], shifts[1], shifts[2], shifts[3])
 
 def testDesUtilities():
-    ''' Unit test for DES utilities '''
+    ''' TBD Unit test for DES utilities '''
     # TODO check against a test vector generated with an existing
     #      DES implmentation
 
@@ -241,10 +242,44 @@ def testDesUtilities():
     print hex(InversePermutationPerSbox[6](RightHalf)),
     print hex(InversePermutationPerSbox[7](RightHalf))
 
+def testDesUtilitiesBis():
+    '''Dumping the state of the first round to compare against a reference implementation'''
+
+    plaintext  = 0x40a184466d9c52b7
+
+    # no key expansion implemented here so far, so taking round 1 subkey directly
+    k = 0x8805bc20c812L;
+
+    # prepare the first round input halves (checked)
+    permutedInput = permuteBits(plaintext, InitialPermutation)
+    rightHalf = permutedInput & 0xFFFFFFFF
+    leftHalf = permutedInput >> 32
+    print 'L  : ' + hex(leftHalf)
+    print 'R  : ' + hex(rightHalf)
+
+    #  expansion (checked)
+    Rt = 0
+    for i in range(0, 8):
+       a = ExpansionPerSbox[i](rightHalf)
+       Rt = (Rt << 6) ^ a;
+    print 'Rt : ' + hex(Rt)
+
+    # key addition
+    Rt = Rt ^ k
+    print 'Rtk: ' + hex(Rt)
+
+    # S-boxes
+    z = 0
+    for i in range(0, 8):
+        z ^= (SBoxLUT[0 - i][Rt & 0x3f] << (i * 4))
+        Rt = Rt >> 6
+    print 'z  : ' + hex(z)
+
 
 ##############################################################################
 # Entrypoint for self-testing
 
 if __name__ == "__main__":
-    testDesUtilities()
-    #generateInversePShifts()
+    #testDesUtilities()
+    testDesUtilitiesBis()
+    #generateInversePermutationPerSbox()
