@@ -9,12 +9,12 @@ TODO: rewrite in Cython or in C using cyclic shifts and other natural bitwise
 Started by Ilya on 2014-11-25
 '''
 
-import numpy as np
-
+from operator import sub
 
 ##############################################################################
 # Core functionality
 
+''' Bit permutations '''
 def permuteBits(x, permutation):
     ''' Permutes bits of x given a permutation table. Implemented as in
         Inspector 4 code. Assumes that permutation table is 0-offset. '''
@@ -24,8 +24,8 @@ def permuteBits(x, permutation):
                   ((x >> (len(permutation) - 1 - permutation[i])) & 1))
     return result
 
-# This is a 64-bit permutaion, not a lookup table
-# copied from pyDES-2.0.1
+# These are b-bit permutaions to be used with permuteBits above,
+# not lookup tables.
 InitialPermutation = [
     57, 49, 41, 33, 25, 17,  9, 1,
     59, 51, 43, 35, 27, 19, 11, 3,
@@ -36,57 +36,70 @@ InitialPermutation = [
     60, 52, 44, 36, 28, 20, 12, 4,
     62, 54, 46, 38, 30, 22, 14, 6
     ]
+RoundPermutation = [
+    15,  6, 19, 20, 28, 11, 27, 16,
+    0,  14, 22, 25,  4, 17, 30,  9,
+    1,   7, 23, 13, 31, 26,  2,  8,
+    18, 12, 29,  5, 21, 10,  3, 24
+    ]
 
-# This is a 6-to-4 bits lookup table
-# copied from pyDES-2.0.1
+''' S-box '''
+def sBox(m, x):
+    row = ((x & 0x20) >> 4) ^ (x & 1) 
+    col = (x & 0x1e) >> 1
+    return SBoxLUT[m][16 * row + col]
+
+# This is a 6-to-4 bits lookup table. It is not directly
+# addressable with S-box input but requires a row-col transform,
+# see sBox() above.
 SBoxLUT = [
     # S1
-    np.array([14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
+    [14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
      0, 15, 7, 4, 14, 2, 13, 1, 10, 6, 12, 11, 9, 5, 3, 8,
      4, 1, 14, 8, 13, 6, 2, 11, 15, 12, 9, 7, 3, 10, 5, 0,
-     15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13], dtype='uint8'),
+     15, 12, 8, 2, 4, 9, 1, 7, 5, 11, 3, 14, 10, 0, 6, 13],
 
     # S2
-    np.array([15, 1, 8, 14, 6, 11, 3, 4, 9, 7, 2, 13, 12, 0, 5, 10,
+    [15, 1, 8, 14, 6, 11, 3, 4, 9, 7, 2, 13, 12, 0, 5, 10,
      3, 13, 4, 7, 15, 2, 8, 14, 12, 0, 1, 10, 6, 9, 11, 5,
      0, 14, 7, 11, 10, 4, 13, 1, 5, 8, 12, 6, 9, 3, 2, 15,
-     13, 8, 10, 1, 3, 15, 4, 2, 11, 6, 7, 12, 0, 5, 14, 9], dtype='uint8'),
+     13, 8, 10, 1, 3, 15, 4, 2, 11, 6, 7, 12, 0, 5, 14, 9],
 
     # S3
-    np.array([10, 0, 9, 14, 6, 3, 15, 5, 1, 13, 12, 7, 11, 4, 2, 8,
+    [10, 0, 9, 14, 6, 3, 15, 5, 1, 13, 12, 7, 11, 4, 2, 8,
      13, 7, 0, 9, 3, 4, 6, 10, 2, 8, 5, 14, 12, 11, 15, 1,
      13, 6, 4, 9, 8, 15, 3, 0, 11, 1, 2, 12, 5, 10, 14, 7,
-     1, 10, 13, 0, 6, 9, 8, 7, 4, 15, 14, 3, 11, 5, 2, 12], dtype='uint8'),
+     1, 10, 13, 0, 6, 9, 8, 7, 4, 15, 14, 3, 11, 5, 2, 12],
 
     # S4
-    np.array([7, 13, 14, 3, 0, 6, 9, 10, 1, 2, 8, 5, 11, 12, 4, 15,
+    [7, 13, 14, 3, 0, 6, 9, 10, 1, 2, 8, 5, 11, 12, 4, 15,
      13, 8, 11, 5, 6, 15, 0, 3, 4, 7, 2, 12, 1, 10, 14, 9,
      10, 6, 9, 0, 12, 11, 7, 13, 15, 1, 3, 14, 5, 2, 8, 4,
-     3, 15, 0, 6, 10, 1, 13, 8, 9, 4, 5, 11, 12, 7, 2, 14], dtype='uint8'),
+     3, 15, 0, 6, 10, 1, 13, 8, 9, 4, 5, 11, 12, 7, 2, 14],
 
     # S5
-    np.array([2, 12, 4, 1, 7, 10, 11, 6, 8, 5, 3, 15, 13, 0, 14, 9,
+    [2, 12, 4, 1, 7, 10, 11, 6, 8, 5, 3, 15, 13, 0, 14, 9,
      14, 11, 2, 12, 4, 7, 13, 1, 5, 0, 15, 10, 3, 9, 8, 6,
      4, 2, 1, 11, 10, 13, 7, 8, 15, 9, 12, 5, 6, 3, 0, 14,
-     11, 8, 12, 7, 1, 14, 2, 13, 6, 15, 0, 9, 10, 4, 5, 3], dtype='uint8'),
+     11, 8, 12, 7, 1, 14, 2, 13, 6, 15, 0, 9, 10, 4, 5, 3],
 
     # S6
-    np.array([12, 1, 10, 15, 9, 2, 6, 8, 0, 13, 3, 4, 14, 7, 5, 11,
+    [12, 1, 10, 15, 9, 2, 6, 8, 0, 13, 3, 4, 14, 7, 5, 11,
      10, 15, 4, 2, 7, 12, 9, 5, 6, 1, 13, 14, 0, 11, 3, 8,
      9, 14, 15, 5, 2, 8, 12, 3, 7, 0, 4, 10, 1, 13, 11, 6,
-     4, 3, 2, 12, 9, 5, 15, 10, 11, 14, 1, 7, 6, 0, 8, 13], dtype='uint8'),
+     4, 3, 2, 12, 9, 5, 15, 10, 11, 14, 1, 7, 6, 0, 8, 13],
 
     # S7
-    np.array([4, 11, 2, 14, 15, 0, 8, 13, 3, 12, 9, 7, 5, 10, 6, 1,
+    [4, 11, 2, 14, 15, 0, 8, 13, 3, 12, 9, 7, 5, 10, 6, 1,
      13, 0, 11, 7, 4, 9, 1, 10, 14, 3, 5, 12, 2, 15, 8, 6,
      1, 4, 11, 13, 12, 3, 7, 14, 10, 15, 6, 8, 0, 5, 9, 2,
-     6, 11, 13, 8, 1, 4, 10, 7, 9, 5, 0, 15, 14, 2, 3, 12], dtype='uint8'),
+     6, 11, 13, 8, 1, 4, 10, 7, 9, 5, 0, 15, 14, 2, 3, 12],
 
     # S8
-    np.array([13, 2, 8, 4, 6, 15, 11, 1, 10, 9, 3, 14, 5, 0, 12, 7,
+    [13, 2, 8, 4, 6, 15, 11, 1, 10, 9, 3, 14, 5, 0, 12, 7,
      1, 15, 13, 8, 10, 3, 7, 4, 12, 5, 6, 11, 0, 14, 9, 2,
      7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8,
-     2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11], dtype='uint8')
+     2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11]
 ]
 
 
@@ -154,7 +167,7 @@ def roundXOR_targetVariable(averagingValue, keyChunk, sBoxNumber):
 
     # compute the intermediate value
     SBoxIn = x ^ keyChunk
-    SBoxOut = SBoxLUT[sBoxNumber][SBoxIn]
+    SBoxOut = sBox(sBoxNumber, SBoxIn)
     RoundInXorOutPerSBox = SBoxOut ^ y
 
     return RoundInXorOutPerSBox
@@ -170,7 +183,7 @@ def roundXOR_allInOne(input, keyChunk, sBoxNumber):
     # get S-box output
     a = ExpansionPerSbox[sBoxNumber](rightHalf) # returns 6 bits of S-box input
     SBoxIn = a ^ keyChunk
-    SBoxOut = SBoxLUT[sBoxNumber][SBoxIn]
+    SBoxOut = sBox(sBoxNumber, SBoxIn)
     
     # gather the input bits that need to be XORed with the S-box output
     b = InversePermutationPerSbox[sBoxNumber](rightHalf ^ leftHalf)
@@ -181,30 +194,99 @@ def roundXOR_allInOne(input, keyChunk, sBoxNumber):
     return RoundInXorOutPerSBox
 
 ##############################################################################
-# Helper functions and tests
+# Self-creators
 
 def generateInversePermutationPerSbox():
     ''' Helper used to generate the shifts. In the output, negative values should be manually replaced by a left shift! '''
+    print '--- generateInversePermutationPerSbox ---'
+
     initialPositionsPerSbox = [
-        np.array([8, 16, 22, 30]),
-        np.array([12, 27, 1, 17]),
-        np.array([23, 15, 29, 5]),
-        np.array([25, 19, 9, 0]),
-        np.array([7, 13, 24, 2]),
-        np.array([3, 28, 10, 18]),
-        np.array([31, 11, 21, 6]),
-        np.array([4, 26, 14, 20]),
+        [ 8, 16, 22, 30],
+        [12, 27,  1, 17],
+        [23, 15, 29,  5],
+        [25, 19,  9,  0],
+        [ 7, 13, 24,  2],
+        [ 3, 28, 10, 18],
+        [31, 11, 21,  6],
+        [ 4, 26, 14, 20]
         ]
-    finalPositions = np.array([28, 29, 30, 31])
+    finalPositions = [28, 29, 30, 31]
 
     for group in initialPositionsPerSbox:
-        shifts = finalPositions - group
+        shifts = map(sub, finalPositions, group) # element-wise list subtraction
         print "((x >> %d) & 8) | ((x >> %d) & 4) | ((x >> %d) & 2) | ((x >> %d) & 1)" % (shifts[0], shifts[1], shifts[2], shifts[3])
 
+##############################################################################
+# Self-tests
+
 def testDesUtilities():
-    ''' TBD Unit test for DES utilities '''
-    # TODO check against a test vector generated with an existing
-    #      DES implmentation
+    ''' Dump the state of the first round to compare against a reference implementation.
+        Compare the inverse round permutation against the forward one.
+        The output should look like:
+
+        --- testDESutilites ---
+        L  : 0x59e0bc92L
+        R  : 0xa69230c8L
+        RK0: 0x8805bc20c812L
+        Rt : 0x50d4a41a1651L
+        Rtk: 0xd8d1183ade43L
+        z  : 0x789b6fef
+        zp : 0x9c7eafebL
+        Testing the inverse permutation
+        zb : 0x789b6fefL
+        Success!
+    '''
+    print '--- testDESutilites ---'
+
+    plaintext  = 0x40a184466d9c52b7L
+
+    # no key expansion implemented here so far, so taking round 1 subkey directly
+    k = 0x8805bc20c812L
+
+    # prepare the first round input halves (checked)
+    permutedInput = permuteBits(plaintext, InitialPermutation)
+    rightHalf = permutedInput & 0xFFFFFFFF
+    leftHalf = permutedInput >> 32
+    print 'L  : ' + hex(leftHalf)
+    print 'R  : ' + hex(rightHalf)
+    print 'RK0: ' + hex(k)
+
+    #  expansion (checked)
+    Rt = 0L
+    for i in range(0, 8):
+       a = ExpansionPerSbox[i](rightHalf)
+       Rt = (Rt << 6) ^ a;
+    print 'Rt : ' + hex(Rt)
+
+    # key addition
+    Rt = Rt ^ k
+    print 'Rtk: ' + hex(Rt)
+
+    # S-boxes
+    z = 0L
+    for i in range(0, 8):
+        z ^= (sBox(7 - i, Rt & 0x3f) << (i * 4))
+        Rt = Rt >> 6
+    print 'z  : ' + hex(z)
+
+    # permutation
+    zp = permuteBits(z, RoundPermutation)
+    print 'zp : ' + hex(zp)
+
+    # testing the inverse permutation
+    print 'Testing the inverse permutation'
+    zb = 0L
+    for i in range(0, 8):
+        zb ^= InversePermutationPerSbox[i](zp) << ((7 - i) * 4)
+    print "z' : " + hex(zb)
+    if (zb == z):
+        print 'Success!'
+    else:
+        print 'Fail!'
+
+def testDesUtilitiesBis():
+    ''' Print out the values, just in case '''
+    print '--- testDesUtilitesBis ---'
 
     Input = 0xA76DB873C63FE078
     KeyChunk = 0x2B
@@ -242,44 +324,11 @@ def testDesUtilities():
     print hex(InversePermutationPerSbox[6](RightHalf)),
     print hex(InversePermutationPerSbox[7](RightHalf))
 
-def testDesUtilitiesBis():
-    '''Dumping the state of the first round to compare against a reference implementation'''
-
-    plaintext  = 0x40a184466d9c52b7
-
-    # no key expansion implemented here so far, so taking round 1 subkey directly
-    k = 0x8805bc20c812L;
-
-    # prepare the first round input halves (checked)
-    permutedInput = permuteBits(plaintext, InitialPermutation)
-    rightHalf = permutedInput & 0xFFFFFFFF
-    leftHalf = permutedInput >> 32
-    print 'L  : ' + hex(leftHalf)
-    print 'R  : ' + hex(rightHalf)
-
-    #  expansion (checked)
-    Rt = 0
-    for i in range(0, 8):
-       a = ExpansionPerSbox[i](rightHalf)
-       Rt = (Rt << 6) ^ a;
-    print 'Rt : ' + hex(Rt)
-
-    # key addition
-    Rt = Rt ^ k
-    print 'Rtk: ' + hex(Rt)
-
-    # S-boxes
-    z = 0
-    for i in range(0, 8):
-        z ^= (SBoxLUT[0 - i][Rt & 0x3f] << (i * 4))
-        Rt = Rt >> 6
-    print 'z  : ' + hex(z)
-
 
 ##############################################################################
 # Entrypoint for self-testing
 
 if __name__ == "__main__":
-    #testDesUtilities()
+    testDesUtilities()
     testDesUtilitiesBis()
-    #generateInversePermutationPerSbox()
+    generateInversePermutationPerSbox()
