@@ -38,15 +38,8 @@ intermediateFunction = roundXOR_targetVariable    # for CPA and LRA
 leakageFunction      = leakageModelHW             # for CPA
 
 ## Known key for ranking
-knownKeyStr = "8A7400A03230DA28".decode("hex") # the correct key
+knownKey = 0x8A7400A03230DA28 # the correct key
 encrypt = True # to avoid selective commenting in the following lines below 
-
-# TODO for DES: compute the 1st round key
-#if encrypt: # for encryption, the first round key is as is
-#    knownKey = np.array(map(ord, knownKeyStr), dtype="uint8")
-#else:       # for decryption, need to run key expansion 
-#    expandedKnownKey = AES().expandKey(map(ord, knownKeyStr), 16, 16 * 11) # this returs a list
-#    knownKey = np.array(expandedKnownKey[176-16:177], dtype="uint8")
 
 
 ##################################################
@@ -69,7 +62,7 @@ print "S-box number            :", SboxNum
 print "---\nLoading " + tracesetFilename
 t0 = time.clock()
 npzfile = np.load(tracesetFilename)
-data = npzfile['data'][0:N] # selecting only the required byte
+data = npzfile['data'][0:N]
 traces = npzfile['traces'][0:N,sampleRange[0]:sampleRange[1]]
 t1 = time.clock()
 timeLoad = t1 - t0
@@ -93,14 +86,20 @@ print "Loading time            : %0.2f s" % timeLoad
 
 print "---\nAttack" 
 
+# get the known key
+roundKey = computeRoundKeys(knownKey, 1)[0]
+knownKeyChunk = roundKeyChunk(roundKey, SboxNum)
+
+# perform conditional averaging
 CondAver = ConditionalAveragerDes(1024, traceLength)
 for i in range(N):
     CondAver.addTrace(data[i], traces[i], averagingFunction, SboxNum)
-
 (avdata, avtraces) = CondAver.getSnapshot()
 
+# attack
 CorrTraces = cpaDESwithAveraging(avdata, avtraces, roundXOR_targetVariable, SboxNum, leakageFunction)
 
+# visualize results
 plt.plot(CorrTraces.T, color = 'grey')
-plt.plot(CorrTraces[0x22, :], color = 'red')
+plt.plot(CorrTraces[knownKeyChunk, :], color = 'red')
 plt.show()

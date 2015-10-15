@@ -11,20 +11,23 @@ Started by Ilya on 2014-11-25
 
 from operator import sub
 
+
 ##############################################################################
 # Core functionality
 
 ''' Bit permutations '''
-def permuteBits(x, permutation):
-    ''' Permutes bits of x given a permutation table. Implemented as in
-        Inspector 4 code. Assumes that permutation table is 0-offset. '''
+def permuteBits(x, permutation, inputLength):
+    ''' Permutes bits of x given a permutation table. Assumes that permutation table is 0-offset.
+        The input bitlength is a parameter
+        The output bitlength is determined by the permutation table
+    '''
     result = 0L
     for i in range(0, len(permutation)):
         result = ((result << 1) |
-                  ((x >> (len(permutation) - 1 - permutation[i])) & 1))
+                  ((x >> (inputLength - 1 - permutation[i])) & 1))
     return result
 
-# These are b-bit permutaions to be used with permuteBits above,
+# These are bit permutaions to be used with permuteBits above,
 # not lookup tables.
 InitialPermutation = [
     57, 49, 41, 33, 25, 17,  9, 1,
@@ -41,6 +44,26 @@ RoundPermutation = [
     0,  14, 22, 25,  4, 17, 30,  9,
     1,   7, 23, 13, 31, 26,  2,  8,
     18, 12, 29,  5, 21, 10,  3, 24
+    ]
+PC1Permutation = [
+    56, 48, 40, 32, 24, 16,  8,
+     0, 57, 49, 41, 33, 25, 17,
+     9,  1, 58, 50, 42, 34, 26,
+    18, 10,  2, 59, 51, 43, 35,
+    62, 54, 46, 38, 30, 22, 14,
+     6, 61, 53, 45, 37, 29, 21,
+    13,  5, 60, 52, 44, 36, 28,
+    20, 12,  4, 27, 19, 11,  3
+    ]
+PC2Permutation = [
+    13, 16, 10, 23,  0,  4,
+     2, 27, 14,  5, 20,  9,
+    22, 18, 11,  3, 25,  7,
+    15,  6, 26, 19, 12,  1,
+    40, 51, 30, 36, 46, 54,
+    29, 39, 50, 44, 32, 47,
+    43, 48, 38, 55, 33, 52,
+    45, 41, 49, 35, 28, 31
     ]
 
 ''' S-box '''
@@ -132,6 +155,34 @@ InversePermutationPerSbox = {
     7 : lambda x : ((x >> 24) & 8) | ((x >>  3) & 4) | ((x >> 16) & 2) | ((x >> 11) & 1)
 }
 
+''' Key expansion '''
+def computeRoundKeys(key, numberOfRounds):
+
+    keyShifts = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
+    mask28 = 0xfffffff
+
+    # rotate left modulo 28 bits
+    rol28 = lambda x, n: ((x << n) & mask28) | ((x & mask28) >> (28 - n))
+
+    permutedKey = permuteBits(key, PC1Permutation, 64) 
+    
+    l = (permutedKey >> 28) & mask28
+    r = permutedKey & mask28
+
+    roundKeys = []
+    for i in range(numberOfRounds):
+        l = rol28(l, keyShifts[i])
+        r = rol28(r, keyShifts[i])
+        lr = (l << 28) ^ r
+        roundKey = permuteBits(lr, PC2Permutation, 56)
+        roundKeys.append(roundKey)
+        
+    return roundKeys
+
+''' Return n-th 6-bit chunk of the 48-bit round key '''
+def roundKeyChunk(roundKey, n):
+    return (roundKey >> (42 - 6 * n)) & 0x3f
+
 
 ##############################################################################
 # Tandem of functions for round in xor out intermediate. First functions
@@ -143,7 +194,7 @@ def roundXOR_valueForAveraging(input, sBoxNumber):
         S-box number '''
 
     # prepare the first round input halves
-    permutedInput = permuteBits(input, InitialPermutation)
+    permutedInput = permuteBits(input, InitialPermutation, 64)
     rightHalf = permutedInput & 0xFFFFFFFF
     leftHalf = permutedInput >> 32
 
@@ -172,11 +223,11 @@ def roundXOR_targetVariable(averagingValue, keyChunk, sBoxNumber):
 
     return RoundInXorOutPerSBox
 
-# Both merged into none, for debugging without conditional averaging
+# Both merged into none, for attack without conditional averaging
 def roundXOR_allInOne(input, keyChunk, sBoxNumber):
 
     # prepare the first round input halves
-    permutedInput = permuteBits(input, InitialPermutation)
+    permutedInput = permuteBits(input, InitialPermutation, 64)
     rightHalf = permutedInput & 0xFFFFFFFF
     leftHalf = permutedInput >> 32
 
@@ -193,12 +244,13 @@ def roundXOR_allInOne(input, keyChunk, sBoxNumber):
     
     return RoundInXorOutPerSBox
 
+
 ##############################################################################
 # Self-creators
 
 def generateInversePermutationPerSbox():
     ''' Helper used to generate the shifts. In the output, negative values should be manually replaced by a left shift! '''
-    print '--- generateInversePermutationPerSbox ---'
+    print '\n--- generateInversePermutationPerSbox ---'
 
     initialPositionsPerSbox = [
         [ 8, 16, 22, 30],
@@ -216,6 +268,7 @@ def generateInversePermutationPerSbox():
         shifts = map(sub, finalPositions, group) # element-wise list subtraction
         print "((x >> %d) & 8) | ((x >> %d) & 4) | ((x >> %d) & 2) | ((x >> %d) & 1)" % (shifts[0], shifts[1], shifts[2], shifts[3])
 
+
 ##############################################################################
 # Self-tests
 
@@ -224,7 +277,7 @@ def testDesUtilities():
         Compare the inverse round permutation against the forward one.
         The output should look like:
 
-        --- testDESutilites ---
+        --- testDesUtilites ---
         L  : 0x59e0bc92L
         R  : 0xa69230c8L
         RK0: 0x8805bc20c812L
@@ -233,18 +286,22 @@ def testDesUtilities():
         z  : 0x789b6fef
         zp : 0x9c7eafebL
         Testing the inverse permutation
-        zb : 0x789b6fefL
+        z' : 0x789b6fefL
         Success!
     '''
-    print '--- testDESutilites ---'
+    print '\n--- testDesUtilites ---'
 
+    # data from the first trace in TC8 PA training traceset
+    key        = 0x8a7400a03230da28L
     plaintext  = 0x40a184466d9c52b7L
+    ciphertext = 0x1cb5ca37b8a7a388L
 
-    # no key expansion implemented here so far, so taking round 1 subkey directly
-    k = 0x8805bc20c812L
+    # key schedule
+    roundKeys = computeRoundKeys(key, 16)
+    k = roundKeys[0]
 
     # prepare the first round input halves (checked)
-    permutedInput = permuteBits(plaintext, InitialPermutation)
+    permutedInput = permuteBits(plaintext, InitialPermutation, 64)
     rightHalf = permutedInput & 0xFFFFFFFF
     leftHalf = permutedInput >> 32
     print 'L  : ' + hex(leftHalf)
@@ -270,7 +327,7 @@ def testDesUtilities():
     print 'z  : ' + hex(z)
 
     # permutation
-    zp = permuteBits(z, RoundPermutation)
+    zp = permuteBits(z, RoundPermutation, 32)
     print 'zp : ' + hex(zp)
 
     # testing the inverse permutation
@@ -284,9 +341,24 @@ def testDesUtilities():
     else:
         print 'Fail!'
 
-def testDesUtilitiesBis():
+
+def dumpRoundKeys():
+    ''' Dump all round keys '''
+    print '\n--- dumpRoundKeys ---'
+
+    key = 0x8a7400a03230da28L
+    roundKeys = computeRoundKeys(key, 16)
+    print 'Key  : ' + format(key, '#018x')
+    for i in range(16):
+        print 'RK' + format(i, '02d') + ' : ' + format(roundKeys[i], '#014x'),
+        print '[',
+        for j in range(8):
+            print format(roundKeyChunk(roundKeys[i], j), '#04x'),
+        print ']'
+
+def dumpMiscValues():
     ''' Print out the values, just in case '''
-    print '--- testDesUtilitesBis ---'
+    print '\n--- dumpMiscValues ---'
 
     Input = 0xA76DB873C63FE078
     KeyChunk = 0x2B
@@ -300,7 +372,7 @@ def testDesUtilitiesBis():
         print "0x%04x, 0x%04x" % (r, t)
 
     print "Initial permutation"
-    print hex(permuteBits(Input, InitialPermutation))
+    print hex(permuteBits(Input, InitialPermutation, 64))
 
     RightHalf = Input & 0xFFFFFFFF
 
@@ -330,5 +402,6 @@ def testDesUtilitiesBis():
 
 if __name__ == "__main__":
     testDesUtilities()
-    testDesUtilitiesBis()
+    dumpRoundKeys()
+    dumpMiscValues()
     generateInversePermutationPerSbox()
