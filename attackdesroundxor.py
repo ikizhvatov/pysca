@@ -16,10 +16,9 @@ import matplotlib.pyplot as plt
 import struct
 import time
 
-#from des_block import * # the DPA contest code as DES toolbox
 from desutils import * # my DES utilities
 from lracpa import * # my LRA-CPA toolbox
-#from condaverdes import * # incremental conditional averaging
+from condaverdes import * # incremental conditional averaging
 
 
 ##################################################
@@ -34,8 +33,8 @@ SboxNum          = 0     # S-box to attack, counting from 0
 
 ## Leakage model
 ## (these parameters correspond to function names in lracpa module)
-#averagingFunction    = roundXOR_valueForAveraging # for CPA and LRA
-#intermediateFunction = roundXOR_targetVariable    # for CPA and LRA
+averagingFunction    = roundXOR_valueForAveraging # for CPA and LRA
+intermediateFunction = roundXOR_targetVariable    # for CPA and LRA
 leakageFunction      = leakageModelHW             # for CPA
 
 ## Known key for ranking
@@ -54,8 +53,8 @@ encrypt = True # to avoid selective commenting in the following lines below
 ### 1. Log the parameters
 
 print "---\nAttack parameters"
-#print "Averaging function      :", averagingFunction.__name__
-#print "Intermediate function   :", intermediateFunction.__name__
+print "Averaging function      :", averagingFunction.__name__
+print "Intermediate function   :", intermediateFunction.__name__
 print "CPA leakage function    :", leakageFunction.__name__
 #print "LRA basis functions     :", basisFunctionsModel.__name__
 print "Encryption              :", encrypt
@@ -76,11 +75,12 @@ t1 = time.clock()
 timeLoad = t1 - t0
 
 # convert data byte arrays to integers (more convenient for DES)
-print "Gathering bytes to Python long integers (no numpy uint64 as numpy shifts do not support it!)"
+print "Converting data..."
 datanew = []
 for i in range(0, len(data)):
     datanew.append(struct.unpack('!Q', data[i][0:8].tostring())[0])
 data = datanew # old data will be garbage-collected
+
 
 # Log traceset parameters
 (numTraces, traceLength) = traces.shape
@@ -93,14 +93,13 @@ print "Loading time            : %0.2f s" % timeLoad
 
 print "---\nAttack" 
 
-#CondAver = ConditionalAveragerDes(1024, traceLength)
-#for i in range(N):
-#    CondAver.addTrace(data[i], traces[i], averagingFunction, SboxNum)
+CondAver = ConditionalAveragerDes(1024, traceLength)
+for i in range(N):
+    CondAver.addTrace(data[i], traces[i], averagingFunction, SboxNum)
 
-#(avdata, avtraces) = CondAver.getSnapshot()
-#plt.plot(avtraces.T)
+(avdata, avtraces) = CondAver.getSnapshot()
 
-CorrTraces = cpaDESwithAveraging(data, traces, roundXOR_allInOne, SboxNum, leakageFunction)
+CorrTraces = cpaDESwithAveraging(avdata, avtraces, roundXOR_targetVariable, SboxNum, leakageFunction)
 
 plt.plot(CorrTraces.T, color = 'grey')
 plt.plot(CorrTraces[0x22, :], color = 'red')
