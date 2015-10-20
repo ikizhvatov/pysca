@@ -28,10 +28,10 @@ from condaverdes import * # incremental conditional averaging
 ## Traceset, number of traces, and S-box to attack
 tracesetFilename = "traces/des_card8_pa.npz"
 sampleRange      = (400, 450) # range of smaples to attack
-N                = 4000  # number of traces to attack (less or equal to the amount of traces in the file)
+N                = 10000  # number of traces to attack (less or equal to the amount of traces in the file)
 offset           = 0   # trace number to start from
-#evolutionStep    = 100   # step for intermediate reports
-SboxNum          = 0     # S-box to attack, counting from 0
+evolutionStep    = 500   # step for intermediate reports
+SboxNum          = 1     # S-box to attack, counting from 0
 
 ## Leakage model
 ## (these parameters correspond to function names in lracpa module)
@@ -84,7 +84,7 @@ print "Loading time            : %0.2f s" % timeLoad
 
 #################################################
 ### 3. CPA with fixed amount of traces
-
+'''
 print "---\nAttack" 
 
 # get the known key
@@ -98,7 +98,7 @@ for i in range(N):
 (avdata, avtraces) = CondAver.getSnapshot()
 
 # CPA
-CorrTraces = cpaDESwithAveraging(avdata, avtraces, intermediateFunction, SboxNum, leakageFunction)
+CorrTraces = cpaDES(avdata, avtraces, intermediateFunction, SboxNum, leakageFunction)
 
 # LRA
 R2, coefs = lraDES(avdata, avtraces, intermediateFunction, SboxNum, basisFunctionsModel)
@@ -135,4 +135,127 @@ axLRAcoefs.set_ylabel('Basis function (bit)')
 axLRAcoefs.set_xlabel('Time sample')
 
 plt.show()
+'''
+#################################################
+### 4. LRA and CPA with evolving amount of traces
 
+print "---\nAttack" 
+
+# get the known key
+roundKey = computeRoundKeys(knownKey, 1)[0]
+knownKeyChunk = roundKeyChunk(roundKey, SboxNum)
+
+t0 = time.clock()
+
+# initialize the incremental averager
+CondAver = ConditionalAveragerDes(1024, traceLength)
+
+# allocate arrays for storing key rank evolution
+numSteps = np.ceil(N / np.double(evolutionStep))
+keyRankEvolutionCPA = np.zeros(numSteps)
+keyRankEvolutionLRA = np.zeros(numSteps)
+
+# the incremental loop
+tracesToSkip = 20 # warm-up to avoid numerical problems for small evolution step
+for i in range (0, tracesToSkip - 1):
+    CondAver.addTrace(data[i], traces[i], averagingFunction, SboxNum)
+for i in range(tracesToSkip - 1, N):
+    CondAver.addTrace(data[i], traces[i], averagingFunction, SboxNum)
+
+    if (((i + 1) % evolutionStep == 0) or ((i + 1) == N)):
+
+        (avdata, avtraces) = CondAver.getSnapshot()
+        
+        CorrTraces = cpaDES(avdata, avtraces, intermediateFunction, SboxNum, leakageFunction)
+        R2, coefs = lraDES(avdata, avtraces, intermediateFunction, SboxNum, basisFunctionsModel)
+        #R2 = normalizeR2Traces(R2)
+
+        print "---\nResults after %d traces" % (i + 1)
+        print "CPA"
+        CorrPeaks = np.max(np.abs(CorrTraces), axis=1) # global maximization, absolute value!
+        CpaWinningCandidate = np.argmax(CorrPeaks)
+        CpaWinningCandidatePeak = np.max(CorrPeaks)
+        CpaCorrectCandidateRank = np.count_nonzero(CorrPeaks >= CorrPeaks[knownKeyChunk])
+        CpaCorrectCandidatePeak = CorrPeaks[knownKeyChunk]
+        print "Winning candidate: 0x%02x, peak magnitude %f" % (CpaWinningCandidate, CpaWinningCandidatePeak)
+        print "Correct candidate: 0x%02x, peak magnitude %f, rank %d" % (knownKeyChunk, CpaCorrectCandidatePeak, CpaCorrectCandidateRank)
+
+        print "LRA"
+        R2Peaks = np.max(R2, axis=1) # global maximization
+        LraWinningCandidate = np.argmax(R2Peaks)
+        LraWinningCandidatePeak = np.max(R2Peaks)
+        LraCorrectCandidateRank = np.count_nonzero(R2Peaks >= R2Peaks[knownKeyChunk])
+        LraCorrectCandidatePeak = R2Peaks[knownKeyChunk]
+        print "Winning candidate: 0x%02x, peak magnitude %f" % (LraWinningCandidate, LraWinningCandidatePeak)
+        print "Correct candidate: 0x%02x, peak magnitude %f, rank %d" % (knownKeyChunk, LraCorrectCandidatePeak, LraCorrectCandidateRank)
+
+        stepCount = np.floor(i / np.double(evolutionStep))
+        keyRankEvolutionCPA[stepCount] = CpaCorrectCandidateRank
+        keyRankEvolutionLRA[stepCount] = LraCorrectCandidateRank
+
+t1 = time.clock()
+timeAll = t1 - t0
+
+#################################################
+### 5. Visualize results
+
+# save the rank evolution for later processing
+#np.savez("results/keyRankEvolutionSbox%02d" % SboxNum, kreCPA=keyRankEvolutionCPA, kreLRA=keyRankEvolutionLRA, step=evolutionStep)
+
+print "---\nCumulative timing"
+print "%0.2f s" % timeAll
+
+print "---\nPlotting..."
+
+fig = plt.figure()
+
+# allocate grid
+axCPA = plt.subplot2grid((3, 2), (0, 0))
+axLRA = plt.subplot2grid((3, 2), (1, 0))
+axLRAcoefs = plt.subplot2grid((3, 2), (2, 0))
+axRankEvolution = plt.subplot2grid((2, 2), (0, 1), rowspan = 3)
+
+# compute trace nubmers for x axis (TODO: move into block 3)
+traceNumbers = np.arange(evolutionStep, N + 1, evolutionStep)
+
+# CPA
+axCPA.plot(CorrTraces.T, color = 'grey')
+if CpaWinningCandidate != knownKeyChunk:
+    axCPA.plot(CorrTraces[CpaWinningCandidate, :], 'blue')
+axCPA.plot(CorrTraces[knownKeyChunk, :], 'r')
+axRankEvolution.plot(traceNumbers, keyRankEvolutionCPA, color = 'green')
+axCPA.set_xlim([0, traceLength])
+
+# LRA
+axLRA.plot(R2.T, color = 'grey')
+if LraWinningCandidate != knownKeyChunk:
+    axLRA.plot(R2[LraWinningCandidate, :], 'blue')
+axLRA.plot(R2[knownKeyChunk, :], 'r')
+axRankEvolution.plot(traceNumbers, keyRankEvolutionLRA, color = 'magenta')
+axLRA.set_xlim([0, traceLength])
+
+# LRA coefs
+coefsKnownKey = np.array(coefs[knownKeyChunk])
+axLRAcoefs.pcolormesh(coefsKnownKey[:,:-1].T)
+axLRAcoefs.set_xlim([0, traceLength])
+
+# labels
+fig.suptitle("CPA and LRA on %d traces" % N)
+axCPA.set_ylabel('Correlation')
+axLRA.set_ylabel('R2')
+axLRAcoefs.set_ylabel('Basis function (bit)')
+axLRAcoefs.set_xlabel('Time sample')
+axRankEvolution.set_ylabel('Correct key candidate rank')
+axRankEvolution.set_xlabel('Number of traces')
+axRankEvolution.set_title('Correct key rank evolution (global maximisation)')
+
+# Limits and tick labels for key rand evolution plot
+axRankEvolution.set_xlim([traceNumbers[np.ceil(tracesToSkip / np.double(evolutionStep)) - 1], N])
+axRankEvolution.set_ylim([0, 64])
+axRankEvolution.grid(b=True, which='both', color='0.65',linestyle='-')
+#axRankEvolution.ticklabel_format(style='sci', axis='x', scilimits=(0,0), useOffset=True)
+
+# Legend for rank evolution plot
+axRankEvolution.legend(['CPA', 'LRA'], loc='upper right')
+
+plt.show()

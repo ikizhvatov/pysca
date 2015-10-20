@@ -341,7 +341,7 @@ def cpaAES(data, traces, intermediateFunction, leakageFunction):
 # intermediateFunction - one of functions like sBoxOut above in the common section
 # sBoxNumber           - DES S-box to attack
 # leakageFunction      - one of the fucntions like leakageModelHW above in this section
-def cpaDESwithAveraging(data, traces, intermediateFunction, sBoxNumber, leakageFunction):
+def cpaDES(data, traces, intermediateFunction, sBoxNumber, leakageFunction):
 
     traceLength = traces.shape[1]
 
