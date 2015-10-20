@@ -1,49 +1,87 @@
 '''
 Compare perfromance of LRA and CPA with and without conditional averaging
-'''
 
-from lracpa import *
+Version: 0.2, 2015-10-20
+Started by Ilya on 2014-11-18
+'''
 
 import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from aes import AES # SlowAES as AES toolbox
+from aes import AES    # interweb's SlowAES toolbox
+from lracpa import *   # my LRA-CPA toolbox
+from condaver import * # incremental conditional averaging
 
-### 0. Prerequisites
+##################################################
+### 0. Configurable parameters
 
-# the correct key byte (for later metrics)
-correctKey = np.array([0x2B,0x7E,0x15,0x16,0x28,0xAE,0xD2,0xA6,0xAB,0xF7,0x15,0x88,0x09,0xCF,0x4F,0x3C])
+## Traceset, number of traces, and S-box to attack
+tracesetFilename = "traces/swaes_atmega_powertraces2_compressed.npz"
+sampleRange      = (0, 274) # range of samples to attack, in the format (low, high)
+N                = 10000 # number of traces to attack (less or equal to the amount of traces in the file)
+offset           = 0    # trace number to start from
+SboxNum          = 3    # S-box to attack, counting from 0
 
-### 1. Load samples and data
+## Leakage model
+## (these parameters correspond to function names in lracpa module)
+intermediateFunction = sBoxOut                  # for CPA and LRA
+leakageFunction      = leakageModelHW           # for CPA
+basisFunctionsModel  = basisModelSingleBits     # for LRA
 
-# parameters
-SboxNum = 2
+## Known key for ranking
+knownKeyStr = "2B7E151628AED2A6ABF7158809CF4F3C".decode("hex") # the correct key
+encrypt = True # to avoid selective commenting in the following lines below 
 
-# readout
-npzfile = np.load('traces/swaes_atmega_powertraces.npz')
-data = npzfile['data'][:,SboxNum]      # selecting only the required byte
-traces = npzfile['traces'][:,900:1100] # selecting the sub-range of samples
+if encrypt: # for encryption, the first round key is as is
+    knownKey = np.array(map(ord, knownKeyStr), dtype="uint8")
+else:       # for decryption, need to run key expansion 
+    expandedKnownKey = AES().expandKey(map(ord, knownKeyStr), 16, 16 * 11) # this returs a list
+    knownKey = np.array(expandedKnownKey[176-16:177], dtype="uint8")
 
-# output traceset parameters
+
+##################################################
+### 1. Log the parameters
+
+print "---\nAttack parameters"
+print "Intermediate function   :", intermediateFunction.__name__
+print "CPA leakage function    :", leakageFunction.__name__
+print "LRA basis functions     :", basisFunctionsModel.__name__
+print "Encryption              :", encrypt
+print "S-box number            :", SboxNum
+print "Known roundkey          : 0x%s" % str(bytearray(knownKey)).encode("hex")
+
+
+#################################################
+### 2. Load samples and data
+
+# Readout
+print "---\nLoading " + tracesetFilename
+t0 = time.clock()
+npzfile = np.load(tracesetFilename)
+data = npzfile['data'][offset:offset + N,SboxNum] # selecting only the required byte
+traces = npzfile['traces'][offset:offset + N,sampleRange[0]:sampleRange[1]]
+t1 = time.clock()
+timeLoad = t1 - t0
+
+# Log traceset parameters
 (numTraces, traceLength) = traces.shape
-print "Traceset parameters"
-print "Number of traces:", numTraces
-print "Trace length:", traceLength
+print "Number of traces loaded :", numTraces
+print "Trace length            :", traceLength
+print "Loading time            : %0.2f s" % timeLoad
 
+#################################################
 ### 2. LRA and CPA with a fixed number of traces
-
-N = 200 # number of traces
 
 print "---\nAttacks with %d traces" % N
 print "Running CPA...",
 t0 = time.clock()
-CorrTraces = cpaAES(data[0:N], traces[0:N])
+CorrTraces = cpaAES(data, traces, intermediateFunction, leakageFunction)
 t1 = time.clock()
 print "done in %f s" % (t1 - t0)
 print "Running LRA...",
 t0 = time.clock()
-R2 = lraAES(data[0:N], traces[0:N])
+(R2, coefs) = lraAES(data, traces, intermediateFunction, basisFunctionsModel)
 t1 = time.clock()
 print "done in %f s" % (t1 - t0)
 print "Normalizing LRA results...",
@@ -58,12 +96,12 @@ t1 = time.clock()
 print "done in %f s" % (t1 - t0)
 print "Running CPA on averaged traces...",
 t0 = time.clock()
-CorrTracesAv = cpaAES(avdata, avtraces)
+CorrTracesAv = cpaAES(avdata, avtraces, intermediateFunction, leakageFunction)
 t1 = time.clock()
 print "done in %f s" % (t1 - t0)
 print "Running LRA on averaged traces...",
 t0 = time.clock()
-R2Av = lraAES(avdata, avtraces)
+(R2Av, coefsav) = lraAES(avdata, avtraces, intermediateFunction, basisFunctionsModel)
 t1 = time.clock()
 print "done in %f s" % (t1 - t0)
 print "Normalizing LRA results...",
@@ -75,25 +113,25 @@ print "done"
 print "---\nPlotting..."
 fig, ax = plt.subplots(3,2,sharex=True, squeeze=True)
 
-WrongKeyRange = range(0, correctKey[SboxNum]) + range(correctKey[SboxNum] + 1, 256)
+WrongKeyRange = range(0, knownKey[SboxNum]) + range(knownKey[SboxNum] + 1, 256)
 
 ax[0][0].plot(CorrTraces[WrongKeyRange, :].T, color = 'grey')
-ax[0][0].plot(CorrTraces[correctKey[SboxNum], :], 'r')
+ax[0][0].plot(CorrTraces[knownKey[SboxNum], :], 'r')
 
 ax[1][0].plot(R2[WrongKeyRange, :].T, color = 'grey')
-ax[1][0].plot(R2[correctKey[SboxNum], :], 'r')
+ax[1][0].plot(R2[knownKey[SboxNum], :], 'r')
 
 ax[2][0].plot(R2norm[WrongKeyRange, :].T, color = 'grey')
-ax[2][0].plot(R2norm[correctKey[SboxNum], :], 'r')
+ax[2][0].plot(R2norm[knownKey[SboxNum], :], 'r')
 
 ax[0][1].plot(CorrTracesAv[WrongKeyRange, :].T, color = 'grey')
-ax[0][1].plot(CorrTracesAv[correctKey[SboxNum], :], 'r')
+ax[0][1].plot(CorrTracesAv[knownKey[SboxNum], :], 'r')
 
 ax[1][1].plot(R2Av[WrongKeyRange, :].T, color = 'grey')
-ax[1][1].plot(R2Av[correctKey[SboxNum], :], 'r')
+ax[1][1].plot(R2Av[knownKey[SboxNum], :], 'r')
 
 ax[2][1].plot(R2AvNorm[WrongKeyRange, :].T, color = 'grey')
-ax[2][1].plot(R2AvNorm[correctKey[SboxNum], :], 'r')
+ax[2][1].plot(R2AvNorm[knownKey[SboxNum], :], 'r')
 
 # same vertical scales for correlation and R2
 ax[0][0].set_ylim(ax[0][1].get_ylim())

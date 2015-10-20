@@ -1,0 +1,62 @@
+compareperformance.py script adjusted to the recent codebase
+
+The following results were obtained on an Intel Core i5-2540M, 8GB RAM,
+Windows 7 x64, Python 2.7.10 x64, numpy-MKL 1.10.1.
+
+----------------------
+In [6]: %run compareperformance.py
+---
+Attack parameters
+Intermediate function   : sBoxOut
+CPA leakage function    : leakageModelHW
+LRA basis functions     : basisModelSingleBits
+Encryption              : True
+S-box number            : 3
+Known roundkey          : 0x2b7e151628aed2a6abf7158809cf4f3c
+---
+Loading traces/swaes_atmega_powertraces.npz
+Number of traces loaded : 2000
+Trace length            : 200
+Loading time            : 0.03 s
+---
+Attacks with 2000 traces
+Running CPA... done in 0.778006 s
+Running LRA... done in 20.568550 s
+Normalizing LRA results... done
+---
+Attacks with 2000 traces and conditional averaging
+Performing conditional trace averaging... done in 0.018740 s
+Running CPA on averaged traces... done in 0.057710 s
+Running LRA on averaged traces... done in 3.075778 s
+Normalizing LRA results... done
+---
+Plotting...
+
+----------------------
+In [7]: %run compareperformance.py
+---
+Attack parameters
+Intermediate function   : sBoxOut
+CPA leakage function    : leakageModelHW
+LRA basis functions     : basisModelSingleBits
+Encryption              : True
+S-box number            : 3
+Known roundkey          : 0x2b7e151628aed2a6abf7158809cf4f3c
+---
+Loading traces/swaes_atmega_powertraces2_compressed.npz
+Number of traces loaded : 10000
+Trace length            : 274
+Loading time            : 0.01 s
+---
+Attacks with 10000 traces
+Running CPA... done in 5.389510 s
+Running LRA... done in 107.093492 s
+Normalizing LRA results... done
+---
+Attacks with 10000 traces and conditional averaging
+Performing conditional trace averaging... done in 0.128395 s
+Running CPA on averaged traces... done in 0.075705 s
+Running LRA on averaged traces... done in 4.017093 s
+Normalizing LRA results... done
+---
+Plotting...
