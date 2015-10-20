@@ -28,8 +28,8 @@ from condaverdes import * # incremental conditional averaging
 ## Traceset, number of traces, and S-box to attack
 tracesetFilename = "traces/des_card8_pa.npz"
 sampleRange      = (400, 450) # range of smaples to attack
-N                = 10000  # number of traces to attack (less or equal to the amount of traces in the file)
-offset           = 0   # trace number to start from
+N                = 10000 # number of traces to attack (less or equal to the amount of traces in the file)
+offset           = 0     # trace number to start from
 evolutionStep    = 500   # step for intermediate reports
 SboxNum          = 1     # S-box to attack, counting from 0
 
@@ -142,8 +142,16 @@ plt.show()
 print "---\nAttack" 
 
 # get the known key
-roundKey = computeRoundKeys(knownKey, 1)[0]
+roundKeyNum = 1
+if (encrypt == False):
+    roundKeyNum = 16
+roundKey = computeRoundKeys(knownKey, roundKeyNum)[roundKeyNum-1]
 knownKeyChunk = roundKeyChunk(roundKey, SboxNum)
+print "Known round key: " + format(roundKey, '#014x'),
+print '[',
+for i in range(8):
+    print format(roundKeyChunk(roundKey, i), '#04x'),
+print ']'
 
 t0 = time.clock()
 
