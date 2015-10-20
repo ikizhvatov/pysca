@@ -234,38 +234,46 @@ def lraDES(data, traces, intermediateFunction, sBoxNumber, basisFunctionsModel):
     SSreg = np.empty((64, traceLength)) # Sum of Squares due to regression
     E = np.empty(numTraces)              # expected values
 
+    allCoefs = [] # placeholder for regression coefficient
+
     # per-keycandidate loop
     for k in np.arange(0, 64, dtype='uint8'):
 
-        # predict intermediate variable
-        intermediateVariable = intermediateFunction(data, k, sBoxNumber)
+        # predict intermediate variable for the current key candiate value
+        intermediateVariable = np.zeros(len(data), dtype='uint8')
+        for j in range(0, len(data)):
+            intermediateVariable[j] = intermediateFunction(data[j], k, sBoxNumber)
 
         # buld equation system
-        M = np.array(map(basisFunctionsModelWrapper(6), intermediateVariable))
+        M = np.array(map(basisFunctionsModelWrapper(4), intermediateVariable))
 
         # some precomputations before the per-sample loop
         P = np.dot(np.linalg.inv(np.dot(M.T, M)), M.T)
-        Q = np.dot(M, P)
+        #Q = np.dot(M, P)
+
+        coefs = [] # placeholder for regression coefficients
 
         # per-sample loop: solve the system for each time moment
         for u in range(0,traceLength):
 
             # if do not need coefficients beta - use precomputed value
-            np.dot(Q, traces[:,u], out=E)
+            #np.dot(Q, traces[:,u], out=E)
 
             # if need the coefficients - do the multiplication using
             # two dot products and let the functuion return beta alongside R2
-            #beta = np.dot(P, traces[:,u])
-            #E = np.dot(M, beta)
+            beta = np.dot(P, traces[:,u])
+            coefs.append(beta)
+            E = np.dot(M, beta)
 
             SSreg[k,u] = np.sum((E - traces[:,u]) ** 2)
 
+        allCoefs.append(coefs)
         #print 'Done with candidate', k
 
     ### 3. compute Rsquared
     R2 = 1 - SSreg / SStot[None, :]
 
-    return R2
+    return R2, allCoefs
 
 # convert R2 to adjusted R2 (https://en.wikipedia.org/wiki/Coefficient_of_determination#Adjusted_R2)
 # n - number of samples
