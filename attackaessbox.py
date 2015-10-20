@@ -26,7 +26,8 @@ from condaver import * # incremental conditional averaging
 
 ## Traceset, number of traces, and S-box to attack
 tracesetFilename = "traces/swaes_atmega_powertraces.npz"
-N                = 100 # number of traces to attack (less or equal to the amount o f traces in the file)
+sampleRange      = (800, 1500) # range of samples to attack, in the format (low, high)
+N                = 100 # number of traces to attack (less or equal to the amount of traces in the file)
 offset           = 0   # trace number to start from
 evolutionStep    = 10  # step for intermediate reports
 SboxNum          = 3   # S-box to attack, counting from 0
@@ -68,7 +69,7 @@ print "---\nLoading " + tracesetFilename
 t0 = time.clock()
 npzfile = np.load(tracesetFilename)
 data = npzfile['data'][offset:offset + N,SboxNum] # selecting only the required byte
-traces = npzfile['traces'][offset:offset + N,800:1500]   # can select a sub-range of samples here TODO: parametrize!
+traces = npzfile['traces'][offset:offset + N,sampleRange[0]:sampleRange[1]]
 t1 = time.clock()
 timeLoad = t1 - t0
 
