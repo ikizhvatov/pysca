@@ -83,7 +83,7 @@ print "Trace length            :", traceLength
 print "Loading time            : %0.2f s" % timeLoad
 
 #################################################
-### 3. CPA with fixed amount of traces
+### 3. Attack with fixed amount of traces
 '''
 print "---\nAttack" 
 
@@ -137,7 +137,7 @@ axLRAcoefs.set_xlabel('Time sample')
 plt.show()
 '''
 #################################################
-### 4. LRA and CPA with evolving amount of traces
+### 4. Attack with evolving amount of traces
 
 print "---\nAttack" 
 
@@ -204,14 +204,14 @@ for i in range(tracesToSkip - 1, N):
 t1 = time.clock()
 timeAll = t1 - t0
 
-#################################################
-### 5. Visualize results
+print "---\nCumulative timing"
+print "%0.2f s" % timeAll
 
 # save the rank evolution for later processing
 #np.savez("results/keyRankEvolutionSbox%02d" % SboxNum, kreCPA=keyRankEvolutionCPA, kreLRA=keyRankEvolutionLRA, step=evolutionStep)
 
-print "---\nCumulative timing"
-print "%0.2f s" % timeAll
+#################################################
+### 5. Visualize results
 
 print "---\nPlotting..."
 
