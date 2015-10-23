@@ -12,7 +12,7 @@ Started by Ilya on 2014-11-20
 
 import numpy as np
 
-class ConditionalAverager:
+class ConditionalAveragerAesSbox:
 
     def __init__(self, numValues, traceLength):
         '''Allocate the matrix of averaged traces'''

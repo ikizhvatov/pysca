@@ -31,7 +31,7 @@ sampleRange      = (800, 1500) # range of samples to attack, in the format (low,
 N                = 100 # number of traces to attack (less or equal to the amount of traces in the file)
 offset           = 0   # trace number to start from
 evolutionStep    = 10  # step for intermediate reports
-SboxNum          = 3   # S-box to attack, counting from 0
+SboxNum          = 2   # S-box to attack, counting from 0
 
 ## Leakage model
 ## (these parameters correspond to function names in lracpa module)
@@ -90,7 +90,7 @@ print "---\nAttack"
 t0 = time.clock()
 
 # initialize the incremental averager
-CondAver = ConditionalAverager(256, traceLength)
+CondAver = ConditionalAveragerAesSbox(256, traceLength)
 
 # allocate arrays for storing key rank evolution
 numSteps = np.ceil(N / np.double(evolutionStep))
