@@ -17,9 +17,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-from aes import AES    # interweb's SlowAES toolbox
-from lracpa import *   # my LRA-CPA toolbox
-from condaver import * # incremental conditional averaging
+from aes import AES       # interweb's SlowAES toolbox
+from lracpa import *      # my LRA-CPA toolbox
+from condaveraes import * # incremental conditional averaging
 
 
 ##################################################
