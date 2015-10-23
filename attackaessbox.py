@@ -8,7 +8,8 @@ In the plots:
 - blue trace is for the winning candidate (e.g. the one with maximum peak)
 - grey traces are for all other candiadte
 
-Version: 0.2, 2015-09-04
+pysca toolbox
+Version: 0.3, 2015-10-22
 Started by Ilya on 2014-11-18
 '''
 
@@ -58,6 +59,7 @@ print "CPA leakage function    :", leakageFunction.__name__
 print "LRA basis functions     :", basisFunctionsModel.__name__
 print "Encryption              :", encrypt
 print "S-box number            :", SboxNum
+print "Known key               : 0x" + knownKeyStr.encode("hex")
 print "Known roundkey          : 0x%s" % str(bytearray(knownKey)).encode("hex")
 
 
@@ -135,14 +137,14 @@ for i in range(tracesToSkip - 1, N):
 t1 = time.clock()
 timeAll = t1 - t0
 
-#################################################
-### 4. Visualize results
+print "---\nCumulative timing"
+print "%0.2f s" % timeAll
 
 # save the rank evolution for later processing
 #np.savez("results/keyRankEvolutionSbox%02d" % SboxNum, kreCPA=keyRankEvolutionCPA, kreLRA=keyRankEvolutionLRA, step=evolutionStep)
 
-print "---\nCumulative timing"
-print "%0.2f s" % timeAll
+#################################################
+### 4. Visualize results
 
 print "---\nPlotting..."
 

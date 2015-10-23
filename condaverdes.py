@@ -1,6 +1,8 @@
 '''
 Conditional averaging for DES
 
+pysca toolbox
+Version: 0.3, 2015-10-22
 Started by Ilya on 2015-09-10
 '''
 

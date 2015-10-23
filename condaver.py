@@ -1,12 +1,12 @@
 '''
-Conditional averaging
-
-Very rough so far, and only for AES
+Conditional averaging for AES. Very rough so far.
 
 TODO: 
 - iterator (therefore loop inside)
 - automatic readout from a file
 
+pysca toolbox
+Version: 0.3, 2015-10-22
 Started by Ilya on 2014-11-20
 '''
 

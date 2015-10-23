@@ -8,7 +8,8 @@ In the plots:
 - blue trace is for the winning candidate (e.g. the one with maximum peak)
 - grey traces are for all other candiadte
 
-Version: 0.2, 2015-10-20
+pysca toolbox
+Version: 0.3, 2015-10-22
 Started by Ilya on 2014-11-26
 '''
 
@@ -44,6 +45,13 @@ basisFunctionsModel  = basisModelSingleBits       # for LRA
 knownKey = 0x8A7400A03230DA28
 encrypt = True
 
+# get the known key
+roundKeyNum = 1
+if (encrypt == False):
+    roundKeyNum = 16
+roundKey = computeRoundKeys(knownKey, roundKeyNum)[roundKeyNum-1]
+knownKeyChunk = roundKeyChunk(roundKey, SboxNum)
+
 ##################################################
 ### 1. Log the parameters
 
@@ -55,6 +63,11 @@ print "LRA basis functions     :", basisFunctionsModel.__name__
 print "Encryption              :", encrypt
 print "S-box number            :", SboxNum
 print "Known key               : " + format(knownKey, "#018x")
+print "Known round key         : " + format(roundKey, '#014x'),
+print '[',
+for i in range(8):
+    print format(roundKeyChunk(roundKey, i), '#04x'),
+print ']'
 
 
 #################################################
@@ -85,11 +98,7 @@ print "Loading time            : %0.2f s" % timeLoad
 #################################################
 ### 3. Attack with fixed amount of traces
 '''
-print "---\nAttack" 
-
-# get the known key
-roundKey = computeRoundKeys(knownKey, 1)[0]
-knownKeyChunk = roundKeyChunk(roundKey, SboxNum)
+print "---\nAttack"
 
 # perform conditional averaging
 CondAver = ConditionalAveragerDes(1024, traceLength)
@@ -139,19 +148,7 @@ plt.show()
 #################################################
 ### 4. Attack with evolving amount of traces
 
-print "---\nAttack" 
-
-# get the known key
-roundKeyNum = 1
-if (encrypt == False):
-    roundKeyNum = 16
-roundKey = computeRoundKeys(knownKey, roundKeyNum)[roundKeyNum-1]
-knownKeyChunk = roundKeyChunk(roundKey, SboxNum)
-print "Known round key: " + format(roundKey, '#014x'),
-print '[',
-for i in range(8):
-    print format(roundKeyChunk(roundKey, i), '#04x'),
-print ']'
+print "---\nAttack"
 
 t0 = time.clock()
 

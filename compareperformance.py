@@ -1,7 +1,8 @@
 '''
 Compare perfromance of LRA and CPA with and without conditional averaging
 
-Version: 0.2, 2015-10-20
+pysca toolbox
+Version: 0.3, 2015-10-22
 Started by Ilya on 2014-11-18
 '''
 
