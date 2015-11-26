@@ -12,17 +12,17 @@ import time
 
 from aes import AES    # interweb's SlowAES toolbox
 from lracpa import *   # my LRA-CPA toolbox
-from condaver import * # incremental conditional averaging
+from condaveraes import * # incremental conditional averaging
 
 ##################################################
 ### 0. Configurable parameters
 
 ## Traceset, number of traces, and S-box to attack
-tracesetFilename = "traces/swaes_atmega_powertraces2_compressed.npz"
-sampleRange      = (0, 274) # range of samples to attack, in the format (low, high)
-N                = 10000 # number of traces to attack (less or equal to the amount of traces in the file)
+tracesetFilename = "traces/swaes_atmega_powertraces.npz"
+sampleRange      = (950, 1150) # range of samples to attack, in the format (low, high)
+N                = 2000 # number of traces to attack (less or equal to the amount of traces in the file)
 offset           = 0    # trace number to start from
-SboxNum          = 3    # S-box to attack, counting from 0
+SboxNum          = 0    # S-box to attack, counting from 0
 
 ## Leakage model
 ## (these parameters correspond to function names in lracpa module)
@@ -74,7 +74,7 @@ print "Loading time            : %0.2f s" % timeLoad
 #################################################
 ### 2. LRA and CPA with a fixed number of traces
 
-print "---\nAttacks with %d traces" % N
+print "---\nAttacks with %d traces" % numTraces
 print "Running CPA...",
 t0 = time.clock()
 CorrTraces = cpaAES(data, traces, intermediateFunction, leakageFunction)
@@ -89,10 +89,10 @@ print "Normalizing LRA results...",
 R2norm = normalizeR2Traces(R2)
 print "done"
 
-print "---\nAttacks with %d traces and conditional averaging" % N
+print "---\nAttacks with %d traces and conditional averaging" % numTraces
 print "Performing conditional trace averaging...",
 t0 = time.clock()
-(avdata, avtraces) = conditionalAveragingAESSbox(data[0:N], traces[0:N])
+(avdata, avtraces) = conditionalAveragingAESSbox(data[0:numTraces], traces[0:numTraces])
 t1 = time.clock()
 print "done in %f s" % (t1 - t0)
 print "Running CPA on averaged traces...",
@@ -138,7 +138,7 @@ ax[2][1].plot(R2AvNorm[knownKey[SboxNum], :], 'r')
 ax[0][0].set_ylim(ax[0][1].get_ylim())
 ax[1][0].set_ylim(ax[1][1].get_ylim())
 
-fig.suptitle("CPA and LRA on %d traces" % N)
+fig.suptitle("CPA and LRA on %d traces" % numTraces)
 ax[0][0].set_title('Without cond. averaging')
 ax[0][1].set_title('With cond. averaging')
 ax[0][0].set_ylabel('Correlation')
