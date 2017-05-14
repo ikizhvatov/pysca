@@ -133,7 +133,7 @@ axLRA.set_xlim([0, traceLength])
 
 # LRA coefs
 coefsKnownKey = np.array(coefs[knownKeyChunk])
-axLRAcoefs.pcolormesh(coefsKnownKey[:,:-1].T)
+axLRAcoefs.pcolormesh(coefsKnownKey[:,:-1].T, cmap="jet")
 axLRAcoefs.set_xlim([0, traceLength])
 
 # labels
