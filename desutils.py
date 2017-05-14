@@ -1,16 +1,17 @@
 '''
+This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
+Author: Ilya Kizhvatov
+Version: 1.0, 2017-05-14
+
 DES transformations required for DPA with conditional averaging.
 
 Self-tests included
 
-Uses minor chunks of code from pyDES-2.0.1 and DPA contest v1 DES example.
+Uses minor chunks of code from pyDES-2.0.1 (https://twhiteman.netfirms.com/des.html)
+and DPA contest v1 DES example (https://svn.comelec.enst.fr/dpacontest/code/reference/).
 
 TODO: rewrite in Cython or in C using cyclic shifts and other natural bitwise
       operations; look at DES implementation in libtomcrypt as an example.
-
-pysca toolbox
-Version: 0.3, 2015-10-22
-Started by Ilya on 2014-11-25
 '''
 
 from operator import sub

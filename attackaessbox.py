@@ -1,16 +1,16 @@
 '''
-The serious attack on the AES S-box.
+This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
+Author: Ilya Kizhvatov
+Version: 1.0, 2017-05-14
 
-The code should be self-explanatory (especially if you look into lracpa.py module).
+CPA and LRA attacks on the AES S-box
+
+The code should be self-explanatory (especially if you look into lracpa.py module)
 
 In the plots:
 - red trace is for known correct candidate
 - blue trace is for the winning candidate (e.g. the one with maximum peak)
-- grey traces are for all other candiadte
-
-pysca toolbox
-Version: 0.3, 2015-10-22
-Started by Ilya on 2014-11-18
+- grey traces are for all other candidates
 '''
 
 import numpy as np

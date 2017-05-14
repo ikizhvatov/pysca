@@ -1,9 +1,9 @@
 '''
-Conditional averaging for DES
+This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
+Author: Ilya Kizhvatov
+Version: 1.0, 2017-05-14
 
-pysca toolbox
-Version: 0.3, 2015-10-22
-Started by Ilya on 2015-09-10
+Conditional averaging for DES
 '''
 
 import numpy as np

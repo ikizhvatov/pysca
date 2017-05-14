@@ -1,7 +1,11 @@
 '''
+This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
+Authors: Erik van den Brink, Ilya Kizhvatov
+Version: 1.0, 2017-05-14
+
 Open an INS TraceSet
 
-Erik
+Versions of this file:
 
 v0.5 12-11-2013 (Ilya)
     * Fixed the format typo; a bit of cleanup

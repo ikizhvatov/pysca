@@ -1,16 +1,16 @@
 '''
-The serious attack on DES round in XOR out.
+This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
+Author: Ilya Kizhvatov
+Version: 1.0, 2017-05-14
 
-The code should be self-explanatory (especially if you look into lracpa.py module).
+CPA and LRA attacks on DES round in XOR out
+
+The code should be self-explanatory (especially if you look into lracpa.py module)
 
 In the plots:
 - red trace is for known correct candidate
 - blue trace is for the winning candidate (e.g. the one with maximum peak)
-- grey traces are for all other candiadte
-
-pysca toolbox
-Version: 0.3, 2015-10-22
-Started by Ilya on 2014-11-26
+- grey traces are for all other candidates
 '''
 
 import numpy as np
@@ -27,8 +27,8 @@ from condaverdes import * # incremental conditional averaging
 ### 0. Configurable parameters
 
 ## Traceset, number of traces, and S-box to attack
-tracesetFilename = "traces/des_card8_pa.npz"
-sampleRange      = (400, 450) # range of smaples to attack
+tracesetFilename = "traces/hwdes_card8_power.npz"
+sampleRange      = (0, 50) # range of smaples to attack
 N                = 10000 # number of traces to attack (less or equal to the amount of traces in the file)
 offset           = 0     # trace number to start from
 evolutionStep    = 500   # step for intermediate reports

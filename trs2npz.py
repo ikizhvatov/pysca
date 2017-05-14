@@ -1,4 +1,8 @@
 '''
+This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
+Author: Ilya Kizhvatov
+Version: 1.0, 2017-05-14
+
 Convert Inspector traceset into numpy array and save to npz.
 Reads the entire traceset into memory, so cannot deal with huge tracesets.
 
@@ -6,6 +10,7 @@ External packages required:
 - numpy
 - Trace.py
 
+Versions of this file:
 v0.2 2014-10-31 Ilya: data conversion to unit64 made optional; some refactoring
 v0.1 2013-11-12 Ilya: initial
 '''

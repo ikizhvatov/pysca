@@ -1,4 +1,8 @@
 '''
+This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
+Author: Ilya Kizhvatov
+Version: 1.0, 2017-05-14
+
 This file is a library of functions for CPA and LRA. The attacks are supposed to be
 implemented as scripts importing this library.
 
@@ -9,10 +13,6 @@ Leakage functions for CPA and basis function models for LRA are defiend here as 
 Non-profiled LRA is implemented a la ASIACRYPT'13 paper [https://eprint.iacr.org/2013/794].
 Implementation uses manual OLS (dot-products and matrix inversion, relying on numpy-MKL
 efficient implementation).
-
-pysca toolbox
-Version: 0.3, 2015-10-22
-Started by Ilya on 2014-05-25
 '''
 
 import numpy as np
