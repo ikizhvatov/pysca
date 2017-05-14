@@ -156,7 +156,7 @@ t0 = time.clock()
 CondAver = ConditionalAveragerDes(1024, traceLength)
 
 # allocate arrays for storing key rank evolution
-numSteps = np.ceil(N / np.double(evolutionStep))
+numSteps = int(np.ceil(N / np.double(evolutionStep)))
 keyRankEvolutionCPA = np.zeros(numSteps)
 keyRankEvolutionLRA = np.zeros(numSteps)
 
@@ -194,7 +194,7 @@ for i in range(tracesToSkip - 1, N):
         print "Winning candidate: 0x%02x, peak magnitude %f" % (LraWinningCandidate, LraWinningCandidatePeak)
         print "Correct candidate: 0x%02x, peak magnitude %f, rank %d" % (knownKeyChunk, LraCorrectCandidatePeak, LraCorrectCandidateRank)
 
-        stepCount = np.floor(i / np.double(evolutionStep))
+        stepCount = int(np.floor(i / np.double(evolutionStep)))
         keyRankEvolutionCPA[stepCount] = CpaCorrectCandidateRank
         keyRankEvolutionLRA[stepCount] = LraCorrectCandidateRank
 
@@ -241,7 +241,7 @@ axLRA.set_xlim([0, traceLength])
 
 # LRA coefs
 coefsKnownKey = np.array(coefs[knownKeyChunk])
-axLRAcoefs.pcolormesh(coefsKnownKey[:,:-1].T)
+axLRAcoefs.pcolormesh(coefsKnownKey[:,:-1].T, cmap="jet")
 axLRAcoefs.set_xlim([0, traceLength])
 
 # labels
@@ -255,7 +255,7 @@ axRankEvolution.set_xlabel('Number of traces')
 axRankEvolution.set_title('Correct key rank evolution (global maximisation)')
 
 # Limits and tick labels for key rand evolution plot
-axRankEvolution.set_xlim([traceNumbers[np.ceil(tracesToSkip / np.double(evolutionStep)) - 1], N])
+axRankEvolution.set_xlim([traceNumbers[int(np.ceil(tracesToSkip / np.double(evolutionStep))) - 1], N])
 axRankEvolution.set_ylim([0, 64])
 axRankEvolution.grid(b=True, which='both', color='0.65',linestyle='-')
 #axRankEvolution.ticklabel_format(style='sci', axis='x', scilimits=(0,0), useOffset=True)
