@@ -1,8 +1,5 @@
 # Pysca toolbox
 
-Author: Ilya Kizhvatov
-Version: 1.0, 2017-05-14
-
 This toolbox was started in 2014 to experiment with efficient differential power analysis (DPA) techniques from the paper "Behind the Scene of Side Channel Attacks" by Victor Lomné, Emmanuel Prouff, and Thomas Roche (https://eprint.iacr.org/2013/794).
 
 The toolox can do:
@@ -16,4 +13,8 @@ It works on traces converted from trs format into numpy npz. The conversion scri
 
 Pysca runs under python 2.7, numpy 1.12.1, matplotlib 2.0.2. See project wiki for usage examples. The example traces are included in the repo using git-lfs.
 
-Pysca is mostly superseeded by https://github.com/Riscure/Jlsca.
+Pysca is mostly superseded by https://github.com/Riscure/Jlsca.
+
+Author: Ilya Kizhvatov
+
+Version: 1.0, 2017-05-14
