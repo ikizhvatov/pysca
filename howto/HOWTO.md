@@ -90,7 +90,7 @@ For this example, we will use another (convenient) way to work: a Jupyter notebo
     [I 13:15:38.824 NotebookApp] The Jupyter Notebook is running at: http://localhost:8888/?token=a75f5aa53be646d4a96bedc760728c9baea3a3a72b9111be
     [I 13:15:38.824 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
 
-You will see the browser poping up with the directory contents, with two .ipynb notebooks.
+You will see the browser popping up with the directory contents, with two .ipynb notebooks.
 
 <img src="howto-notebooks.png" width="640">
 
