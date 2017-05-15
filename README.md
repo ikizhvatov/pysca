@@ -23,7 +23,7 @@ Pysca requires python 2.7 with packages numpy, matplotlib, and optionally jupyte
 
 Under the hood, the most interesting technical tricks in pysca are perhaps:
 * fast computation of correlation (see https://github.com/ikizhvatov/efficient-columnwise-correlation for a dedicated study)
-* conditional averaging implementation for DES (because of all the bit permuations, it requires splitting the leakage function into two stages)
+* conditional averaging implementation for DES (because of all the bit permutations, it requires splitting the leakage function into two stages)
 
 Author: Ilya Kizhvatov<br>
 Version: 1.0, 2017-05-14
