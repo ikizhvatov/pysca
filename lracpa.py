@@ -281,6 +281,26 @@ def correlationTraceSO(O, P):
     tmp *= np.einsum('i,i->', DP, DP)
     return np.dot(DP, DO) / np.sqrt(tmp)
 
+# Even faster correlation trace computation
+# Takes the full matrix of predictions instead of just a column
+# O - (n,t) array of n traces with t samples each
+# P - (n,m) array of n predictions for each of the m candidates
+# returns an (m,t) correaltion matrix of m traces t samples each
+def correlationTraces(O, P):
+    (n, t) = O.shape      # n traces of t samples
+    (n_bis, m) = P.shape  # n predictions for each of m candidates
+
+    DO = O - (np.einsum("nt->t", O, dtype='float64') / np.double(n)) # compute O - mean(O)
+    DP = P - (np.einsum("nm->m", P, dtype='float64') / np.double(n)) # compute P - mean(P)
+    
+    numerator = np.einsum("nm,nt->mt", DP, DO)
+    tmp1 = np.einsum("nm,nm->m", DP, DP)
+    tmp2 = np.einsum("nt,nt->t", DO, DO)
+    tmp = np.einsum("m,t->mt", tmp1, tmp2)
+    denominator = np.sqrt(tmp)
+
+    return numerator / denominator
+
 # CPA attack
 # data                 - 1-D array of input bytes
 # traces               - 2-D array of traces
@@ -297,14 +317,9 @@ def cpaAES(data, traces, intermediateFunction, leakageFunction):
         H[i,:] = intermediateFunction(data, k[i])
 
     # compute leakage hypotheses for every  all the key candidates
-    HL = map(leakageFunction, H) # leakage model here (HW for now)
+    HL = np.array(map(leakageFunction, H)).T # leakage model here (HW for now)
 
-    CorrTraces = np.empty([256, traceLength]);
-
-    # per-keycandidate loop
-    # TODO: loop can be avoided by clever use of np.einsum in correlationTraceSO(...)
-    for i in range(0, 256):
-        CorrTraces[i] = correlationTraceSO(traces, HL[i])
+    CorrTraces = correlationTraces(traces, HL)
 
     return CorrTraces
 
@@ -326,13 +341,8 @@ def cpaDES(data, traces, intermediateFunction, sBoxNumber, leakageFunction):
             H[i,j] = intermediateFunction(data[j], k[i], sBoxNumber)
 
     # compute leakage hypotheses for every  all the key candidates
-    HL = map(leakageFunction, H) # leakage model here (HW for now)
+    HL = np.array(map(leakageFunction, H)).T # leakage model here (HW for now)
 
-    CorrTraces = np.empty([64, traceLength]);
-
-    # per-keycandidate loop
-    # TODO: loop can be avoided by clever use of np.einsum in correlationTraceSO(...)
-    for i in range(0, 64):
-        CorrTraces[i] = correlationTraceSO(traces, HL[i])
+    CorrTraces = correlationTraces(traces, HL)
 
     return CorrTraces
