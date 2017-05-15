@@ -1,3 +1,4 @@
 # configuration for git-lfs
 traces/*.trs filter=lfs diff=lfs merge=lfs -text
 traces/*.npz filter=lfs diff=lfs merge=lfs -text
+howto/*.png filter=lfs diff=lfs merge=lfs -text

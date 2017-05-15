@@ -26,7 +26,7 @@ from condaveraes import * # incremental conditional averaging
 ### 0. Configurable parameters
 
 ## Traceset, number of traces, and S-box to attack
-tracesetFilename = "traces/swaes_atmega_powertraces.npz"
+tracesetFilename = "traces/swaes_atmega_power.npz"
 sampleRange      = (800, 1500) # range of samples to attack, in the format (low, high)
 N                = 100 # number of traces to attack (less or equal to the amount of traces in the file)
 offset           = 0   # trace number to start from
