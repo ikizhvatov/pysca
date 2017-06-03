@@ -2,7 +2,7 @@
 
 This toolbox was started in 2014 to experiment with efficient differential power analysis (DPA) techniques from the paper "Behind the Scene of Side Channel Attacks" by Victor Lomné, Emmanuel Prouff, and Thomas Roche (https://eprint.iacr.org/2013/794).
 
-To clone this repo with the included example traces you will need Git-LFS. Without Git-LFS, only pointers to traces will be cloned.
+To clone this repo with the included example traces you will need [Git-LFS](https://git-lfs.github.com). Without Git-LFS, only pointers to traces will be cloned.
 
 ## Why
 The toolbox was designed with the following in mind:
