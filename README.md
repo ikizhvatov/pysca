@@ -25,7 +25,7 @@ Pysca implements:
 
 For usage basics refer to the [HOWTO](howto/HOWTO.md).
 
-For a deeper dive into leakage modelling using linear regression, clone the tutorial from a separate repo into the subfolder:
+For a deeper dive into [leakage modelling using linear regression](https://github.com/ikizhvatov/leakage-modelling-tutorial), clone the tutorial into the subfolder:
 
     git clone https://github.com/ikizhvatov/leakage-modelling-tutorial.git
 
