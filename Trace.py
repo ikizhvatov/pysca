@@ -1,11 +1,14 @@
 '''
 This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
-Authors: Erik van den Brink, Ilya Kizhvatov
+Authors: Erik van den Brink, Ilya Kizhvatov, Paul van Aubel
 Version: 1.0, 2017-05-14
 
 Open an INS TraceSet
 
 Versions of this file:
+
+v0.6 12-11-2017 (Paul)
+    * performance greatly improved by using np.fromfile
 
 v0.5 12-11-2013 (Ilya)
     * Fixed the format typo; a bit of cleanup
@@ -22,12 +25,14 @@ v0.2 5-3-2013 (Erik)
     * Removed debug code
 
 Todo:
-    * Convert to numpy arrays/lists?
     * Save tracesets back to file
 '''
 
+from __future__ import print_function
+
 import sys
 import struct
+import numpy as np
 
 class Trace():
     def __init__(self, title, data, samples):
@@ -38,11 +43,20 @@ class Trace():
 class TraceSet():
     #header definitions
     NumberOfTraces          = 0x41
-    NumerOfSamplesPerTrace  = 0x42
+    NumberOfSamplesPerTrace = 0x42
     SampleCoding            = 0x43
     DataSpace               = 0x44
     TitleSpace              = 0x45
+    GlobalTitle             = 0x46
     Description             = 0x47
+    XLabel                  = 0x49
+    YLabel                  = 0x4a
+    XScale                  = 0x4b
+    YScale                  = 0x4c
+    ScopeRange              = 0x55
+    ChannelCoupling         = 0x56
+    Offset                  = 0x57
+    ScopeID                 = 0x59
     TraceBlock              = 0x5F #Trace block, a flat memory space
 
     # enum for sampe coding
@@ -57,9 +71,11 @@ class TraceSet():
         self._numberOfTraces = None
         self._numberOfSamplesPerTrace = None
         self._sampleCoding = None
+        self._npSampleCoding = None
         self._sampleCodingByteSize = None
         self._titleSpace = 0
         self._dataSpace = 0
+        self._yscale = 1
 
         #properties
         self._sampleSpace = None
@@ -80,6 +96,9 @@ class TraceSet():
 
     def _readUINT32(self):
         return struct.unpack("I",self._handle.read(4))[0];
+
+    def _readFloat32(self):
+        return struct.unpack("f",self._handle.read(4))[0]
 
     def open(self, fileName):
         self._handle = open(fileName,'rb')
@@ -109,22 +128,38 @@ class TraceSet():
                 self._traceBlockOffset = f.tell() #get current pos
                 f.seek(self._traceBlockOffset + self._traceBlockSpace) # XXX: why this?
             elif tag == self.TitleSpace:
+                if length != 1:
+                    raise ValueError("Incorrect length for TitleSpace header field")
                 self._titleSpace = self._readUINT8()
             elif tag == self.NumberOfTraces:
+                if length != 4:
+                    raise ValueError("Incorrect length for NumberOfTraces header field")
                 self._numberOfTraces = self._readUINT32()
             elif tag == self.DataSpace:
+                if length != 2:
+                    raise ValueError("Incorrect length for DataSpace header field")
                 self._dataSpace = self._readUINT16()
-            elif tag == self.NumerOfSamplesPerTrace:
+            elif tag == self.NumberOfSamplesPerTrace:
+                if length != 4:
+                    raise ValueError("Incorrect length for NumberOfSamplesPerTrace header field")
                 self._numberOfSamplesPerTrace = self._readUINT32()
+            elif tag == self.YScale:
+                if length != 4:
+                    raise ValueError("Incorrect length for YScale header field")
+                self._yscale = self._readFloat32()
             elif tag == self.SampleCoding:
+                if length != 1:
+                    raise ValueError("Incorrect length for SampleCoding header field")
                 self._sampleCoding = self._readUINT8()
                 #compensate for float sample coding tag
                 if self._sampleCoding == self.CodingFloat: #float
                     self._sampleCodingByteSize = 4
+                    self._npSampleCoding = "float32"
                 else:
+                    self._npSampleCoding = "int" + str(self._sampleCoding * 8)
                     self._sampleCodingByteSize = self._sampleCoding
             else:
-                #print "Unknown tag: %x len: %d" % (tag, length) # TODO: support other optional tags
+                print("Unhandled tag: %x len: %d" % (tag, length), file=sys.stderr) # TODO: support other optional tags
                 f.read(length)
 
             offset = offset + 2 + addLen + length
@@ -132,28 +167,10 @@ class TraceSet():
     def getTrace(self, traceIndex):
         f = self._handle
         f.seek(self._traceBlockOffset + traceIndex * self._traceSpace)
-        
+
         title = f.read(self._titleSpace)
         data = map(ord,f.read(self._dataSpace))
 
-        samples = f.read(self._numberOfSamplesPerTrace * self._sampleCodingByteSize)
-
-        if self._sampleCoding == self.CodingByte: #byte
-            fmt = 'b'
-            samples = map(lambda x:struct.unpack(fmt,x)[0], samples)
-        else:
-            if self._sampleCoding == self.CodingShort: #short
-                fmt = 'h'
-            elif self._sampleCoding == self.CodingInt: # int
-                fmt = 'i'
-            elif self._sampleCoding == self.CodingFloat: # float
-                fmt = 'f'
-            
-            tmp = []
-            for i in xrange(0,len(samples)/self._sampleCodingByteSize):
-                index = i*self._sampleCodingByteSize
-                #WARNING: does not keep endianess in mind, little endian by default (aka x86)
-                tmp.append(struct.unpack(fmt,samples[index:index+self._sampleCodingByteSize])[0])
-            samples = tmp
+        samples = np.fromfile(f, dtype=self._npSampleCoding, count=self._numberOfSamplesPerTrace)
 
         return Trace(title, data, samples)
