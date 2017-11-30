@@ -1,13 +1,13 @@
 '''
 This file is part of pysca toolbox, license is GPLv3, see https://www.gnu.org/licenses/gpl-3.0.en.html
-Authors: Erik van den Brink, Ilya Kizhvatov, Paul van Aubel
+Authors: Erik van den Brink, Ilya Kizhvatov, Pol van Aubel
 Version: 1.0, 2017-05-14
 
 Open an INS TraceSet
 
 Versions of this file:
 
-v0.6 12-11-2017 (Paul)
+v0.6 28-05-2017 (Pol)
     * performance greatly improved by using np.fromfile
 
 v0.5 12-11-2013 (Ilya)
@@ -169,8 +169,7 @@ class TraceSet():
         f.seek(self._traceBlockOffset + traceIndex * self._traceSpace)
 
         title = f.read(self._titleSpace)
-        data = map(ord,f.read(self._dataSpace))
-
+        data = np.fromfile(f, dtype='uint8', count=self._dataSpace)
         samples = np.fromfile(f, dtype=self._npSampleCoding, count=self._numberOfSamplesPerTrace)
 
         return Trace(title, data, samples)
