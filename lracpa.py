@@ -275,10 +275,10 @@ def leakageModelHW(x):
 # returns a correlation trace
 def correlationTraceSO(O, P):
     n = P.size
-    DO = O - (np.einsum('ij->j', O, dtype='float64') / np.double(n))
-    DP = P - (np.einsum('i->', P, dtype='float64') / np.double(n))
-    tmp = np.einsum('ij,ij->j', DO, DO)
-    tmp *= np.einsum('i,i->', DP, DP)
+    DO = O - (np.einsum('ij->j', O, dtype='float64', optimize='optimal') / np.double(n))
+    DP = P - (np.einsum('i->', P, dtype='float64', optimize='optimal') / np.double(n))
+    tmp = np.einsum('ij,ij->j', DO, DO, optimize='optimal')
+    tmp *= np.einsum('i,i->', DP, DP, optimize='optimal')
     return np.dot(DP, DO) / np.sqrt(tmp)
 
 # Even faster correlation trace computation
@@ -290,13 +290,13 @@ def correlationTraces(O, P):
     (n, t) = O.shape      # n traces of t samples
     (n_bis, m) = P.shape  # n predictions for each of m candidates
 
-    DO = O - (np.einsum("nt->t", O, dtype='float64') / np.double(n)) # compute O - mean(O)
-    DP = P - (np.einsum("nm->m", P, dtype='float64') / np.double(n)) # compute P - mean(P)
+    DO = O - (np.einsum("nt->t", O, dtype='float64', optimize='optimal') / np.double(n)) # compute O - mean(O)
+    DP = P - (np.einsum("nm->m", P, dtype='float64', optimize='optimal') / np.double(n)) # compute P - mean(P)
     
-    numerator = np.einsum("nm,nt->mt", DP, DO)
-    tmp1 = np.einsum("nm,nm->m", DP, DP)
-    tmp2 = np.einsum("nt,nt->t", DO, DO)
-    tmp = np.einsum("m,t->mt", tmp1, tmp2)
+    numerator = np.einsum("nm,nt->mt", DP, DO, optimize='optimal')
+    tmp1 = np.einsum("nm,nm->m", DP, DP, optimize='optimal')
+    tmp2 = np.einsum("nt,nt->t", DO, DO, optimize='optimal')
+    tmp = np.einsum("m,t->mt", tmp1, tmp2, optimize='optimal')
     denominator = np.sqrt(tmp)
 
     return numerator / denominator
