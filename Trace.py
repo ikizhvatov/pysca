@@ -102,15 +102,15 @@ class TraceSet():
         return struct.unpack("f",self._handle.read(4))[0];
 
     def _writeUINT8(self, val):
-        #print "UINT8: %02x"%(val&0xFF)
+        #print("UINT8: %02x"%(val&0xFF))
         return self._handle.write(struct.pack("B",(val&0xFF)));
 
     def _writeUINT16(self, val):
-        #print "UINT16: %04x"%(val&0xFFFF)
+        #print("UINT16: %04x"%(val&0xFFFF))
         return self._handle.write(struct.pack("H",(val&0xFFFF)));
 
     def _writeUINT32(self, val):
-        #print "UINT32: %08x"%(val&0xFFFFFFFF)
+        #print("UINT32: %08x"%(val&0xFFFFFFFF))
         return self._handle.write(struct.pack("I",(val&0xFFFFFFFF)));
 
     def _writeTitleSpace(self, val):

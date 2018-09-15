@@ -36,12 +36,12 @@ def determineTrsSampleCoding(ts):
     
 # Print main metadata of the .trs traceset
 def printTrsMetadata(ts, samplesDataType):
-    print "Number of traces:\t%d" % ts._numberOfTraces
-    print "Samples per trace:\t%d" % ts._numberOfSamplesPerTrace
-    print "Samples datatype:\t%s" % samplesDataType
-    print "Data bytes:\t\t%d" % ts._dataSpace
-    print "Trace block size:\t%d bytes" % ts._traceBlockSpace
-    print "Header size:\t\t%d bytes" % ts._traceBlockOffset
+    print("Number of traces:\t%d" % ts._numberOfTraces)
+    print("Samples per trace:\t%d" % ts._numberOfSamplesPerTrace)
+    print("Samples datatype:\t%s" % samplesDataType)
+    print("Data bytes:\t\t%d" % ts._dataSpace)
+    print("Trace block size:\t%d bytes" % ts._traceBlockSpace)
+    print("Header size:\t\t%d bytes" % ts._traceBlockOffset)
 
 if __name__ == "__main__":
 
@@ -56,23 +56,30 @@ if __name__ == "__main__":
     printTrsMetadata(ts, samplesDataType)
 
     # read out the traces
-    print "Preallocating arrays"
+    print("Preallocating arrays")
     traces = np.empty(shape=(ts._numberOfTraces, ts._numberOfSamplesPerTrace), dtype = samplesDataType)
     data = np.empty(shape=(ts._numberOfTraces, ts._dataSpace), dtype = "uint8")
-    print "Populating arrays"
+    print("Populating arrays")
     for i in range(ts._numberOfTraces):
         t = ts.getTrace(i)
         traces[i, :] = np.array(t._samples, dtype = samplesDataType)
         data[i, :] = np.array(t._data, dtype = "uint8")
 
     if args.convertdata:
-        print "Gathering bytes to uint64's"
-        datanew = np.empty((len(data),2), dtype='uint64')
+        print("Gathering bytes to uint64's")
+        wordBytes = 8
+        structCommand = '!Q'
+        numberOfWordsNecessary = (len(data[0]) + wordBytes - 1)//(wordBytes)
+        datanew = np.empty((len(data),numberOfWordsNecessary), dtype='uint64')
         for i in range(0, len(data)):
-            datanew[i][0] = struct.unpack('!Q', data[i][0:8].tostring())[0]
-            datanew[i][1] = struct.unpack('!Q', data[i][8:16].tostring())[0]
+            if(len(data[i]) < numberOfWordsNecessary*wordBytes):
+                tempData = np.concatenate((np.zeros(numberOfWordsNecessary*wordBytes - len(data[i]), dtype="uint8"), data[i]))
+            else:
+                tempData = data[i]
+            for j in range(numberOfWordsNecessary):
+                datanew[i][j] = struct.unpack(structCommand, tempData[(j*wordBytes):((j+1)*wordBytes)].tostring())[0]
         data = datanew # old data will be garbage-collected
 
-    print "Saving file"
+    print("Saving file")
     np.savez(args.filename, traces=traces, data=data)
-    print "Done"
+    print("Done")
